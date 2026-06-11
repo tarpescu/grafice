@@ -127,8 +127,8 @@ export function autoGenerateSchedule(
       const toRemove = assignedDays.length - targetShifts;
       
       if (toRemove > 0) {
-        // Find days that are assigned '8' and NOT locked
-        const removableDays = assignedDays.filter(d => !lockedShifts[emp.id]?.[d.day]);
+        // Find days that are assigned '8', NOT locked, and NOT a holiday
+        const removableDays = assignedDays.filter(d => !lockedShifts[emp.id]?.[d.day] && !d.isHoliday);
         // Remove shifts evenly across the month to create days off
         const actualRemove = Math.min(toRemove, removableDays.length);
         for (let i = 0; i < actualRemove; i++) {

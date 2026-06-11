@@ -177,8 +177,8 @@ export function calculateEmployeeHours(
     totalWorked += shiftHours;
     nightHours += shiftNight;
 
-    // Weekend hours count as 100% overtime
-    if (dayInfo.isWeekend && shiftHours > 0) {
+    // Weekend and legal holiday hours count as 100% overtime
+    if ((dayInfo.isWeekend || dayInfo.isHoliday) && shiftHours > 0) {
       overtime100 += shiftHours;
     }
   });
