@@ -170,6 +170,107 @@ app.post('/api/requirements', async (req, res) => {
   }
 });
 
+// GET vacation planning for a specific year
+app.get('/api/vacations', async (req, res) => {
+  const { year } = req.query;
+  if (!year) {
+    return res.status(400).json({ error: 'Year is required' });
+  }
+  try {
+    const { rows } = await db.query(
+      'SELECT CAST(employee_id AS TEXT) as employee_id, job_title, seniority_total, seniority_unit, vacation_days_allowed, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec FROM vacation_planning WHERE year = ?',
+      [parseInt(year)]
+    );
+    
+    // Format response: { employeeId: { jobTitle, seniorityTotal, seniorityUnit, vacationDaysAllowed, monthlyPlanned: { 0: jan, 1: feb, ... } } }
+    const result = {};
+    rows.forEach((row) => {
+      result[row.employee_id] = {
+        jobTitle: row.job_title || '',
+        seniorityTotal: row.seniority_total || '',
+        seniorityUnit: row.seniority_unit || '',
+        vacationDaysAllowed: row.vacation_days_allowed || '',
+        monthlyPlanned: {
+          0: row.jan || '',
+          1: row.feb || '',
+          2: row.mar || '',
+          3: row.apr || '',
+          4: row.may || '',
+          5: row.jun || '',
+          6: row.jul || '',
+          7: row.aug || '',
+          8: row.sep || '',
+          9: row.oct || '',
+          10: row.nov || '',
+          11: row.dec || ''
+        }
+      };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching vacations:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST save vacation planning for a year (Transactional bulk-save)
+app.post('/api/vacations', async (req, res) => {
+  const { year, vacations } = req.body;
+  if (!year || !vacations) {
+    return res.status(400).json({ error: 'Year and vacations data are required' });
+  }
+
+  const dbConn = await db.getDb();
+  try {
+    await dbConn.run('BEGIN TRANSACTION');
+    
+    // 1. Delete existing vacation planning for this year
+    await dbConn.run(
+      'DELETE FROM vacation_planning WHERE year = ?',
+      [parseInt(year)]
+    );
+
+    // 2. Insert new vacation planning
+    for (const empId of Object.keys(vacations)) {
+      const v = vacations[empId];
+      const m = v.monthlyPlanned || {};
+      await dbConn.run(
+        `INSERT INTO vacation_planning (
+          employee_id, year, job_title, seniority_total, seniority_unit, vacation_days_allowed,
+          jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          parseInt(empId),
+          parseInt(year),
+          v.jobTitle || '',
+          v.seniorityTotal || '',
+          v.seniorityUnit || '',
+          v.vacationDaysAllowed || '',
+          m[0] || '',
+          m[1] || '',
+          m[2] || '',
+          m[3] || '',
+          m[4] || '',
+          m[5] || '',
+          m[6] || '',
+          m[7] || '',
+          m[8] || '',
+          m[9] || '',
+          m[10] || '',
+          m[11] || ''
+        ]
+      );
+    }
+
+    await dbConn.run('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    await dbConn.run('ROLLBACK');
+    console.error('Error saving vacations transaction:', error);
+    res.status(500).json({ error: 'Failed to save vacations' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

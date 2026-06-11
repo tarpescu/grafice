@@ -234,17 +234,14 @@ export function autoGenerateSchedule(
         const selected = candidates[0];
         
         // Decide shift type: Z (12h) or 8 (8h)
-        let shiftType: ShiftType = '8';
-        if (dayInfo.isWeekend) {
-          shiftType = 'Z';
-        } else {
-          const coWeekdays = weekdays.filter(day => lockedShifts[selected.id]?.[day.day] === 'CO' || lockedShifts[selected.id]?.[day.day] === 'CIC').length;
-          const targetHours = Math.round(Math.max(0, workingDays - coWeekdays) * 8 * selected.norm);
-          const ratio = targetHours > 0 ? hoursTracker[selected.id] / targetHours : 0;
-          
-          // If lagging behind target hours, assign a 12h day shift (Z), otherwise an 8h shift
-          shiftType = ratio < 0.75 ? 'Z' : '8';
-        }
+        const shiftType: ShiftType = dayInfo.isWeekend
+          ? 'Z'
+          : (() => {
+              const coWeekdays = weekdays.filter(day => lockedShifts[selected.id]?.[day.day] === 'CO' || lockedShifts[selected.id]?.[day.day] === 'CIC').length;
+              const targetHours = Math.round(Math.max(0, workingDays - coWeekdays) * 8 * selected.norm);
+              const ratio = targetHours > 0 ? hoursTracker[selected.id] / targetHours : 0;
+              return ratio < 0.75 ? 'Z' : '8';
+            })();
 
         shifts[selected.id][d] = shiftType;
         hoursTracker[selected.id] += shiftType === 'Z' ? 12 : 8;
@@ -271,7 +268,7 @@ export function autoGenerateSchedule(
       });
 
       // If coverage is not met, look for 8h employees to swap their shifts to weekend
-      let daysNeeded = Math.max(0, roleReq.dayShifts - assignedDayCount);
+      const daysNeeded = Math.max(0, roleReq.dayShifts - assignedDayCount);
       if (daysNeeded === 0) return;
 
       for (let i = 0; i < daysNeeded; i++) {

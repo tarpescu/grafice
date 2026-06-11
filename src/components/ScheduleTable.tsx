@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth, calculateEmployeeHours } from '../utils/calculations';
-import { Printer, AlertTriangle, FileDown, Menu, ChevronLeft } from 'lucide-react';
+import { Printer, AlertTriangle, FileDown, Menu, ChevronLeft, Trash2 } from 'lucide-react';
 import type { ValidationWarning } from '../utils/scheduler';
 
 interface ScheduleTableProps {
@@ -13,6 +13,7 @@ interface ScheduleTableProps {
   onShiftChange: (employeeId: string, day: number, shift: ShiftType) => void;
   onAutoGenerate: () => void;
   onClearSchedule: () => void;
+  onClearAll: () => void;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
 }
@@ -26,6 +27,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   onShiftChange,
   onAutoGenerate,
   onClearSchedule,
+  onClearAll,
   isSidebarOpen,
   onToggleSidebar,
 }) => {
@@ -71,7 +73,12 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           <button onClick={onAutoGenerate} className="btn btn-primary">
             Generare Automată
           </button>
-          <button onClick={onClearSchedule} className="btn btn-secondary" style={{ color: '#ef4444' }}>
+          <button onClick={() => { if (window.confirm('Sigur doriți să ștergeți turele? Concediile (CO/CIC) vor fi păstrate.')) onClearSchedule(); }} className="btn btn-secondary" style={{ color: '#ef4444' }}>
+            <Trash2 size={14} />
+            Șterge Ture
+          </button>
+          <button onClick={() => { if (window.confirm('Sigur doriți să ștergeți TOT, inclusiv concediile (CO/CIC)?')) onClearAll(); }} className="btn btn-secondary" style={{ color: '#ef4444' }}>
+            <Trash2 size={14} />
             Șterge Tot
           </button>
         </div>

@@ -921,3 +921,422 @@ input:focus, select:focus {
   background-color: #ffe4e6 !important; /* Soft rose color */
   color: #e11d48;
 }
+
+/* Tab Navigation Styles */
+.tabs-navigation-container {
+  display: flex;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 0.35rem;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  width: fit-content;
+}
+
+.tab-nav-btn {
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.tab-nav-btn:hover {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.tab-nav-btn.active {
+  color: white;
+  background: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Vacation Table Header Layout */
+.vacation-header {
+  padding: 1.5rem;
+  background: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.vacation-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.vacation-header-left h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.registration-input-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.inline-header-input {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  border-bottom: 1px dashed var(--color-border);
+  background: transparent;
+  width: auto;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.inline-header-input:hover,
+.inline-header-input:focus {
+  border-color: var(--color-primary);
+  border-bottom-style: solid;
+  background: #f0f9ff;
+  outline: none;
+}
+
+.inline-header-input.reg-number {
+  width: 65px;
+  text-align: center;
+}
+
+.inline-header-input.reg-date {
+  width: 100px;
+  text-align: center;
+}
+
+.inline-header-input.section-name {
+  font-weight: 700;
+  text-align: right;
+  width: 150px;
+}
+
+.vacation-header-title {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.vacation-header-title h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 0.5px;
+}
+
+/* Vacation Table Styles */
+.vacation-table {
+  font-size: 0.8rem !important;
+  table-layout: fixed !important;
+  width: 100% !important;
+  min-width: 1200px !important;
+}
+
+.vacation-table th {
+  padding: 0.5rem 0.25rem !important;
+  font-weight: 600;
+  background-color: #f8fafc;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.vacation-table td {
+  padding: 0 !important;
+  position: relative;
+  height: 40px;
+}
+
+.table-cell-input {
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text);
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.table-cell-input:hover {
+  background: rgba(2, 132, 199, 0.03);
+}
+
+.table-cell-input:focus {
+  background: #f0f9ff;
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 0 var(--color-primary);
+}
+
+.table-cell-input.text-left {
+  text-align: left;
+}
+
+.table-cell-input.text-center {
+  text-align: center;
+}
+
+.signature-cell-placeholder {
+  min-width: 90px;
+}
+
+/* Vacation Disclaimers block */
+.vacation-disclaimer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.725rem;
+  color: var(--color-text);
+  line-height: 1.4;
+  text-align: left;
+}
+
+.vacation-disclaimer p {
+  margin-bottom: 0.35rem;
+  font-weight: 500;
+}
+
+.vacation-disclaimer ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.vacation-disclaimer li {
+  margin-bottom: 0.15rem;
+}
+
+/* Print specific for vacations */
+@media print {
+  .no-print-col {
+    display: none !important;
+  }
+
+  .inline-header-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    color: black !important;
+  }
+
+  .inline-header-input.section-name {
+    text-align: right !important;
+  }
+
+  .table-cell-input {
+    border: none !important;
+    background: transparent !important;
+    color: black !important;
+    padding: 0 !important;
+  }
+
+  .vacation-header {
+    border: none !important;
+    padding: 0 0 1rem 0 !important;
+  }
+
+  .vacation-header-top {
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 0.35rem !important;
+  }
+
+  .vacation-header-title {
+    margin-top: 0.5rem !important;
+  }
+
+  .vacation-disclaimer {
+    border-top: 1px solid #000 !important;
+    color: black !important;
+    padding: 1rem 0 !important;
+  }
+
+  .vacation-disclaimer ul {
+    padding-left: 1rem !important;
+  }
+
+  .vacation-signatures {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    margin-top: 1rem !important;
+    page-break-inside: avoid;
+  }
+}
+
+/* PDF Generation styles compatibility */
+.generating-pdf .no-print-col {
+  display: none !important;
+}
+
+.generating-pdf .inline-header-input {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  color: black !important;
+}
+
+.generating-pdf .inline-header-input.section-name {
+  text-align: right !important;
+}
+
+.generating-pdf .table-cell-input {
+  border: none !important;
+  background: transparent !important;
+  color: black !important;
+  padding: 0 !important;
+}
+
+.generating-pdf .vacation-header {
+  border: none !important;
+  padding: 0 0 1rem 0 !important;
+}
+
+.generating-pdf .vacation-header-top {
+  border-bottom: 2px solid #000 !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.generating-pdf .vacation-header-title {
+  margin-top: 0.5rem !important;
+}
+
+.generating-pdf .vacation-disclaimer {
+  border-top: 1px solid #000 !important;
+  color: black !important;
+  padding: 1rem 0 !important;
+}
+
+.generating-pdf .vacation-disclaimer ul {
+  padding-left: 1rem !important;
+}
+
+.generating-pdf .vacation-signatures {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  margin-top: 1rem !important;
+}
+
+/* Vacation Cell Layout & Badges */
+.vacation-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.vacation-cell .table-cell-input {
+  padding-right: 14px !important;
+}
+
+.scheduled-badge-count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 0px 3px;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+  line-height: 1.2;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.month-selector-sub-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+.vacation-calendar-grid {
+  font-size: 0.75rem !important;
+}
+
+.vacation-calendar-grid th, 
+.vacation-calendar-grid td {
+  padding: 3px 1px !important;
+}
+
+/* Print Specifics for Vacation Calendar */
+@media print {
+  .vacation-calendar-grid {
+    font-size: 8px !important;
+    width: 100% !important;
+  }
+  
+  .vacation-calendar-grid th, 
+  .vacation-calendar-grid td {
+    border: 1px solid #000000 !important;
+    padding: 2px 1px !important;
+    color: black !important;
+    background-color: transparent !important;
+  }
+}
+
+/* Vacation Planner Inline Form Card */
+.vacation-planner-inline-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-title-small {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inline-form-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.inline-form-row .form-group {
+  flex: 2 1 200px;
+}
+
+.inline-form-row .form-group-short {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1 1 80px;
+}
+
+.inline-form-row button.apply-vacation-btn {
+  margin-top: 0;
+  height: 42px;
+  align-self: flex-end;
+  flex: 1 1 150px;
+}
+

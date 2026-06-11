@@ -1,9 +1,12 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from 'react';
 import type { Employee, ShiftType } from './utils/calculations';
 import { autoGenerateSchedule, validateSchedule } from './utils/scheduler';
 import type { ValidationWarning, SchedulerRequirements } from './utils/scheduler';
 import { StaffManager } from './components/StaffManager';
 import { ScheduleTable } from './components/ScheduleTable';
+import { VacationTable } from './components/VacationTable';
+import type { VacationPlanningState, VacationMetadata, EmployeeVacationInfo } from './components/VacationTable';
 import { Calendar, Settings, X } from 'lucide-react';
 
 const INITIAL_ROSTER: Employee[] = [
@@ -24,8 +27,7 @@ const INITIAL_ROSTER: Employee[] = [
   { id: '15', name: 'ELEFTERIU MIHAELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
   { id: '16', name: 'CLIMINTE LUMINIȚA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
   { id: '17', name: 'GRECU MIRELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '18', name: 'DAMIAN ANA MARIA', role: 'AS', norm: 0.8, active: true, shiftPattern: 'normal' },
-  { id: '19', name: 'UNGUREANU SERGIU', role: 'MED', norm: 0.8, active: true, shiftPattern: 'normal' }
+  { id: '18', name: 'DAMIAN ANA MARIA', role: 'AS', norm: 0.8, active: true, shiftPattern: 'normal' }
 ];
 
 function App() {
@@ -33,33 +35,7 @@ function App() {
     const saved = localStorage.getItem('spital_employees');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Migrate legacy employees that have contractHours but no norm
-        const migrated = parsed.map((emp: any) => {
-          if (emp.norm === undefined) {
-            let norm = 1.0;
-            const ch = emp.contractHours || 168;
-            if (ch >= 160) norm = 1.0;
-            else if (ch >= 135) norm = 0.8;
-            else if (ch >= 125) norm = 0.75;
-            else if (ch >= 115) norm = 0.7;
-            else if (ch >= 105) norm = 0.65;
-            else if (ch >= 95) norm = 0.6;
-            else norm = 0.5;
-            
-            return {
-              id: emp.id,
-              name: emp.name,
-              role: emp.role,
-              active: emp.active ?? true,
-              shiftPattern: emp.shiftPattern || 'normal',
-              norm
-            };
-          }
-          return emp;
-        });
-        localStorage.setItem('spital_employees', JSON.stringify(migrated));
-        return migrated;
+        return JSON.parse(saved);
       } catch (e) {
         console.error('Failed to parse employees', e);
       }
@@ -72,12 +48,39 @@ function App() {
   const [month, setMonth] = useState<number>(5); // June is 5 (0-indexed)
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth > 1024);
   
-  // Vacation Planner States
-  const [vacationEmpId, setVacationEmpId] = useState<string>('');
-  const [vacationType, setVacationType] = useState<'CO' | 'CIC'>('CO');
-  const [vacationStartDay, setVacationStartDay] = useState<number>(1);
-  const [vacationEndDay, setVacationEndDay] = useState<number>(1);
-  
+  // Tab Navigation State
+  const [activeTab, setActiveTab] = useState<'pontaj' | 'concedii'>('pontaj');
+
+  // Vacation Planning States
+  const [vacationPlanning, setVacationPlanning] = useState<VacationPlanningState>(() => {
+    const saved = localStorage.getItem('spital_vacations_2026');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse vacations', e);
+      }
+    }
+    return {};
+  });
+
+  const [vacationMetadata, setVacationMetadata] = useState<VacationMetadata>(() => {
+    const saved = localStorage.getItem('spital_vacation_metadata_2026');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse vacation metadata', e);
+      }
+    }
+    return {
+      registrationNumber: '',
+      registrationDate: '',
+      section: 'SECȚIE ATI',
+    };
+  });
+
+
   const [shifts, setShifts] = useState<{ [employeeId: string]: { [day: number]: ShiftType } }>(() => {
     const saved = localStorage.getItem('spital_shifts_2026_5');
     if (saved) {
@@ -124,6 +127,72 @@ function App() {
     }
   }, [year, month]);
 
+  // Sync vacation planning state when year changes
+  useEffect(() => {
+    const saved = localStorage.getItem(`spital_vacations_${year}`);
+    if (saved) {
+      try {
+        setVacationPlanning(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse vacations', e);
+        setVacationPlanning({});
+      }
+    } else {
+      setVacationPlanning({});
+    }
+
+    const savedMeta = localStorage.getItem(`spital_vacation_metadata_${year}`);
+    if (savedMeta) {
+      try {
+        setVacationMetadata(JSON.parse(savedMeta));
+      } catch (e) {
+        console.error('Failed to parse vacation metadata', e);
+        setVacationMetadata({ registrationNumber: '', registrationDate: '', section: 'SECȚIE ATI' });
+      }
+    } else {
+      setVacationMetadata({ registrationNumber: '', registrationDate: '', section: 'SECȚIE ATI' });
+    }
+  }, [year]);
+
+  const handleUpdateVacation = (employeeId: string, fields: Partial<EmployeeVacationInfo>) => {
+    setVacationPlanning((prev) => {
+      const existing = prev[employeeId] || {
+        jobTitle: '',
+        seniorityTotal: '',
+        seniorityUnit: '',
+        vacationDaysAllowed: '',
+        monthlyPlanned: {}
+      };
+      const updated = {
+        ...prev,
+        [employeeId]: {
+          ...existing,
+          ...fields,
+        }
+      };
+      localStorage.setItem(`spital_vacations_${year}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleUpdateMetadata = (fields: Partial<VacationMetadata>) => {
+    setVacationMetadata((prev) => {
+      const updated = {
+        ...prev,
+        ...fields
+      };
+      localStorage.setItem(`spital_vacation_metadata_${year}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleClearVacations = () => {
+    if (window.confirm("Sigur doriți să ștergeți toate programările de concediu pentru acest an?")) {
+      setVacationPlanning({});
+      localStorage.setItem(`spital_vacations_${year}`, JSON.stringify({}));
+    }
+  };
+
   // Re-run validation whenever shifts, month, or roster changes
   useEffect(() => {
     const warns = validateSchedule(employees, shifts, year, month);
@@ -154,29 +223,21 @@ function App() {
     saveShifts(updated);
   };
 
-  // Handle range vacation planning (CO/CIC)
-  const handleApplyVacation = () => {
-    if (!vacationEmpId) return;
-    if (vacationStartDay > vacationEndDay) {
-      alert("Ziua de început nu poate fi mai mare decât ziua de sfârșit!");
-      return;
+  // Handle batch shift updates (e.g. applying vacation to a range of days)
+  const handleBatchShiftChange = (employeeId: string, days: { day: number; shift: ShiftType }[]) => {
+    const empShifts = { ...(shifts[employeeId] || {}) };
+    for (const entry of days) {
+      empShifts[entry.day] = entry.shift;
     }
-
-    const updated = { ...shifts };
-    if (!updated[vacationEmpId]) {
-      updated[vacationEmpId] = {};
-    }
-
-    for (let d = vacationStartDay; d <= vacationEndDay; d++) {
-      updated[vacationEmpId][d] = vacationType;
-    }
-
+    const updated = {
+      ...shifts,
+      [employeeId]: empShifts,
+    };
     setShifts(updated);
     saveShifts(updated);
-
-    const empName = employees.find(e => e.id === vacationEmpId)?.name || '';
-    alert(`S-a aplicat concediul de tip ${vacationType} pentru ${empName} în perioada ${vacationStartDay}-${vacationEndDay}.`);
   };
+
+
 
   // Run the TS automatic scheduler algorithm
   const handleAutoGenerate = () => {
@@ -185,8 +246,25 @@ function App() {
     saveShifts(result);
   };
 
-  // Clear all shifts in the active grid
+  // Clear shifts but preserve vacation days (CO/CIC)
   const handleClearSchedule = () => {
+    const cleared: typeof shifts = {};
+    employees.forEach((emp) => {
+      const empShifts = shifts[emp.id] || {};
+      const preserved: { [day: number]: ShiftType } = {};
+      for (const [dayStr, shift] of Object.entries(empShifts)) {
+        if (shift === 'CO' || shift === 'CIC') {
+          preserved[Number(dayStr)] = shift;
+        }
+      }
+      cleared[emp.id] = preserved;
+    });
+    setShifts(cleared);
+    saveShifts(cleared);
+  };
+
+  // Clear absolutely everything including vacation days
+  const handleClearAll = () => {
     const cleared: typeof shifts = {};
     employees.forEach((emp) => {
       cleared[emp.id] = {};
@@ -233,11 +311,6 @@ function App() {
     localStorage.setItem('spital_employees', JSON.stringify(updated));
   };
 
-  // Get days list for the active month to populate vacation date dropdowns
-  const dateObj = new Date(year, month + 1, 0);
-  const numDays = dateObj.getDate();
-  const daysList = Array.from({ length: numDays }, (_, i) => i + 1);
-
   return (
     <div className="app-container">
       {/* Mobile Sidebar Backdrop */}
@@ -271,79 +344,7 @@ function App() {
               month={month}
             />
 
-            {/* Vacation Planner Card */}
-            <div className="card no-print">
-              <div className="card-title">
-                <span>Planificare Concediu (CO / CIC)</span>
-                <Calendar size={18} />
-              </div>
-              
-              <div className="staff-form">
-                <div className="form-group">
-                  <label htmlFor="vacation-employee">Angajat</label>
-                  <select
-                    id="vacation-employee"
-                    value={vacationEmpId}
-                    onChange={(e) => setVacationEmpId(e.target.value)}
-                  >
-                    <option value="">Alege angajat...</option>
-                    {employees.filter(e => e.active).map(e => (
-                      <option key={e.id} value={e.id}>{e.name} ({e.role})</option>
-                    ))}
-                  </select>
-                </div>
 
-                <div className="staff-form-row">
-                  <div className="form-group">
-                    <label htmlFor="vacation-type">Tip Concediu</label>
-                    <select
-                      id="vacation-type"
-                      value={vacationType}
-                      onChange={(e) => setVacationType(e.target.value as 'CO' | 'CIC')}
-                    >
-                      <option value="CO">CO (Odihnă)</option>
-                      <option value="CIC">CIC (Creștere Copil)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="vacation-start">De la ziua</label>
-                    <select
-                      id="vacation-start"
-                      value={vacationStartDay}
-                      onChange={(e) => setVacationStartDay(Number(e.target.value))}
-                    >
-                      {daysList.map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="vacation-end">Până la ziua</label>
-                    <select
-                      id="vacation-end"
-                      value={vacationEndDay}
-                      onChange={(e) => setVacationEndDay(Number(e.target.value))}
-                    >
-                      {daysList.map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleApplyVacation}
-                  disabled={!vacationEmpId}
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  Aplică Concediu
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Coverage Configuration panel */}
@@ -448,28 +449,68 @@ function App() {
 
         {/* Right Side Schedule Grid */}
         <div className="right-column">
-          <ScheduleTable
-            employees={employees}
-            shifts={shifts}
-            year={year}
-            month={month}
-            warnings={warnings}
-            onShiftChange={handleShiftChange}
-            onAutoGenerate={handleAutoGenerate}
-            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            isSidebarOpen={isSidebarOpen}
-            onClearSchedule={handleClearSchedule}
-          />
+          {/* Tab Navigation Menu */}
+          <div className="no-print tabs-navigation-container">
+            <button
+              className={`tab-nav-btn ${activeTab === 'pontaj' ? 'active' : ''}`}
+              onClick={() => setActiveTab('pontaj')}
+            >
+              Grafic de Ture
+            </button>
+            <button
+              className={`tab-nav-btn ${activeTab === 'concedii' ? 'active' : ''}`}
+              onClick={() => setActiveTab('concedii')}
+            >
+              Programare Concedii (CO)
+            </button>
+          </div>
+
+          {activeTab === 'pontaj' ? (
+            <ScheduleTable
+              employees={employees}
+              shifts={shifts}
+              year={year}
+              month={month}
+              warnings={warnings}
+              onShiftChange={handleShiftChange}
+              onAutoGenerate={handleAutoGenerate}
+              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+              isSidebarOpen={isSidebarOpen}
+              onClearSchedule={handleClearSchedule}
+              onClearAll={handleClearAll}
+            />
+          ) : (
+            <VacationTable
+              employees={employees}
+              vacationPlanning={vacationPlanning}
+              metadata={vacationMetadata}
+              year={year}
+              onUpdateVacation={handleUpdateVacation}
+              onUpdateMetadata={handleUpdateMetadata}
+              onClearVacations={handleClearVacations}
+              shifts={shifts}
+              onShiftChange={handleShiftChange}
+              onBatchShiftChange={handleBatchShiftChange}
+              activeMonth={month}
+              setActiveMonth={setMonth}
+            />
+          )}
           
           {/* Month & Year Selectors Aligned Bottom Right */}
           <div className="no-print month-selector-card">
             <Calendar size={16} className="calendar-icon-secondary" />
-            <span>Selectează Luna:</span>
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-              {['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'].map((name, idx) => (
-                <option key={idx} value={idx}>{name}</option>
-              ))}
-            </select>
+            {activeTab === 'pontaj' ? (
+              <>
+                <span>Selectează Luna:</span>
+                <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+                  {['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'].map((name, idx) => (
+                    <option key={idx} value={idx}>{name}</option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <span>Selectează Anul:</span>
+            )}
             <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
               {[2025, 2026, 2027, 2028].map((y) => (
                 <option key={y} value={y}>{y}</option>

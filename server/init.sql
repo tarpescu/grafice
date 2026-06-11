@@ -25,6 +25,29 @@ CREATE TABLE IF NOT EXISTS requirements (
   night_shifts INTEGER NOT NULL DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS vacation_planning (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id INTEGER REFERENCES employees(id) ON DELETE CASCADE,
+  year INTEGER NOT NULL,
+  job_title TEXT DEFAULT '',
+  seniority_total TEXT DEFAULT '',
+  seniority_unit TEXT DEFAULT '',
+  vacation_days_allowed TEXT DEFAULT '',
+  jan TEXT DEFAULT '',
+  feb TEXT DEFAULT '',
+  mar TEXT DEFAULT '',
+  apr TEXT DEFAULT '',
+  may TEXT DEFAULT '',
+  jun TEXT DEFAULT '',
+  jul TEXT DEFAULT '',
+  aug TEXT DEFAULT '',
+  sep TEXT DEFAULT '',
+  oct TEXT DEFAULT '',
+  nov TEXT DEFAULT '',
+  dec TEXT DEFAULT '',
+  UNIQUE (employee_id, year)
+);
+
 -- 2. Seed Initial Employees
 INSERT INTO employees (name, role, contract_hours) VALUES
   ('APOSTOL FLORENTINA', 'AS', 128),
