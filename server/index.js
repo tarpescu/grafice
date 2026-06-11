@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./db');
@@ -18,7 +19,7 @@ app.use((req, res, next) => {
 app.get('/api/employees', async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT id::text, name, role, contract_hours as "contractHours", active FROM employees ORDER BY role DESC, name ASC'
+      'SELECT CAST(id AS TEXT) as id, name, role, contract_hours as "contractHours", active FROM employees ORDER BY role DESC, name ASC'
     );
     res.json(rows);
   } catch (error) {
@@ -35,7 +36,7 @@ app.post('/api/employees', async (req, res) => {
   }
   try {
     const { rows } = await db.query(
-      'INSERT INTO employees (name, role, contract_hours) VALUES ($1, $2, $3) RETURNING id::text, name, role, contract_hours as "contractHours", active',
+      'INSERT INTO employees (name, role, contract_hours) VALUES (?, ?, ?) RETURNING CAST(id AS TEXT) as id, name, role, contract_hours as "contractHours", active',
       [name, role, contractHours]
     );
     res.json(rows[0]);
@@ -49,7 +50,7 @@ app.post('/api/employees', async (req, res) => {
 app.delete('/api/employees/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await db.query('DELETE FROM employees WHERE id = $1', [parseInt(id)]);
+    await db.query('DELETE FROM employees WHERE id = ?', [parseInt(id)]);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting employee:', error);
@@ -65,7 +66,7 @@ app.get('/api/shifts', async (req, res) => {
   }
   try {
     const { rows } = await db.query(
-      'SELECT employee_id::text, day, shift_type FROM shifts WHERE year = $1 AND month = $2',
+      'SELECT CAST(employee_id AS TEXT) as employee_id, day, shift_type FROM shifts WHERE year = ? AND month = ?',
       [parseInt(year), parseInt(month)]
     );
     
@@ -92,13 +93,13 @@ app.post('/api/shifts', async (req, res) => {
     return res.status(400).json({ error: 'Year, month, and shifts are required' });
   }
 
-  const client = await db.pool.connect();
+  const dbConn = await db.getDb();
   try {
-    await client.query('BEGIN');
+    await dbConn.run('BEGIN TRANSACTION');
     
     // 1. Delete existing shifts for this month
-    await client.query(
-      'DELETE FROM shifts WHERE year = $1 AND month = $2',
+    await dbConn.run(
+      'DELETE FROM shifts WHERE year = ? AND month = ?',
       [parseInt(year), parseInt(month)]
     );
 
@@ -109,22 +110,20 @@ app.post('/api/shifts', async (req, res) => {
         const type = empShifts[day];
         // Only insert shifts that aren't empty/free indicator
         if (type && type !== '-') {
-          await client.query(
-            'INSERT INTO shifts (employee_id, year, month, day, shift_type) VALUES ($1, $2, $3, $4, $5)',
+          await dbConn.run(
+            'INSERT INTO shifts (employee_id, year, month, day, shift_type) VALUES (?, ?, ?, ?, ?)',
             [parseInt(empId), parseInt(year), parseInt(month), parseInt(day), type]
           );
         }
       }
     }
 
-    await client.query('COMMIT');
+    await dbConn.run('COMMIT');
     res.json({ success: true });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await dbConn.run('ROLLBACK');
     console.error('Error saving shifts transaction:', error);
     res.status(500).json({ error: 'Failed to save shifts' });
-  } finally {
-    client.release();
   }
 });
 
@@ -157,11 +156,11 @@ app.post('/api/requirements', async (req, res) => {
   }
   try {
     await db.query(
-      'INSERT INTO requirements (role, day_shifts, night_shifts) VALUES ($1, $2, $3) ON CONFLICT (role) DO UPDATE SET day_shifts = EXCLUDED.day_shifts, night_shifts = EXCLUDED.night_shifts',
+      'INSERT INTO requirements (role, day_shifts, night_shifts) VALUES (?, ?, ?) ON CONFLICT (role) DO UPDATE SET day_shifts = EXCLUDED.day_shifts, night_shifts = EXCLUDED.night_shifts',
       ['MED', MED.dayShifts, MED.nightShifts]
     );
     await db.query(
-      'INSERT INTO requirements (role, day_shifts, night_shifts) VALUES ($1, $2, $3) ON CONFLICT (role) DO UPDATE SET day_shifts = EXCLUDED.day_shifts, night_shifts = EXCLUDED.night_shifts',
+      'INSERT INTO requirements (role, day_shifts, night_shifts) VALUES (?, ?, ?) ON CONFLICT (role) DO UPDATE SET day_shifts = EXCLUDED.day_shifts, night_shifts = EXCLUDED.night_shifts',
       ['AS', AS.dayShifts, AS.nightShifts]
     );
     res.json({ success: true });
