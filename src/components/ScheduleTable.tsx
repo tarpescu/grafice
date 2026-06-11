@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth, calculateEmployeeHours } from '../utils/calculations';
-import { Printer, AlertTriangle, FileDown } from 'lucide-react';
+import { Printer, AlertTriangle, FileDown, Menu, ChevronLeft } from 'lucide-react';
 import type { ValidationWarning } from '../utils/scheduler';
 
 interface ScheduleTableProps {
@@ -13,6 +13,8 @@ interface ScheduleTableProps {
   onShiftChange: (employeeId: string, day: number, shift: ShiftType) => void;
   onAutoGenerate: () => void;
   onClearSchedule: () => void;
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 export const ScheduleTable: React.FC<ScheduleTableProps> = ({
@@ -24,12 +26,22 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   onShiftChange,
   onAutoGenerate,
   onClearSchedule,
+  isSidebarOpen,
+  onToggleSidebar,
 }) => {
+  const [filter, setFilter] = React.useState<'all' | 'normal' | '8h'>('all');
   const daysInfo = getDaysInMonth(year, month);
   const monthNames = [
     'IANUARIE', 'FEBRUARIE', 'MARTIE', 'APRILIE', 'MAI', 'IUNIE',
     'IULIE', 'AUGUST', 'SEPTEMBRIE', 'OCTOMBRIE', 'NOIEMBRIE', 'DECEMBRIE'
   ];
+
+  const filteredEmployees = employees.filter((emp) => {
+    if (filter === 'all') return true;
+    if (filter === 'normal') return emp.shiftPattern !== '8h';
+    if (filter === '8h') return emp.shiftPattern === '8h';
+    return true;
+  });
 
   const handlePrint = () => {
     window.print();
@@ -48,6 +60,14 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
       {/* Table Actions Toolbar */}
       <div className="no-print toolbar-container">
         <div className="toolbar-group">
+          <button 
+            onClick={onToggleSidebar} 
+            className={`btn btn-secondary toolbar-toggle-btn`}
+            title={isSidebarOpen ? 'Ascunde Personal & Setări' : 'Afișează Personal & Setări'}
+          >
+            {isSidebarOpen ? <ChevronLeft size={16} /> : <Menu size={16} />}
+            <span className="toggle-btn-text">Personal & Setări</span>
+          </button>
           <button onClick={onAutoGenerate} className="btn btn-primary">
             Generare Automată
           </button>
@@ -55,6 +75,29 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             Șterge Tot
           </button>
         </div>
+
+        {/* Category Filter Selector Tabs */}
+        <div className="filter-tabs-container">
+          <button
+            onClick={() => setFilter('all')}
+            className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
+          >
+            Toți
+          </button>
+          <button
+            onClick={() => setFilter('normal')}
+            className={`filter-tab ${filter === 'normal' ? 'active' : ''}`}
+          >
+            Tura Normală
+          </button>
+          <button
+            onClick={() => setFilter('8h')}
+            className={`filter-tab ${filter === '8h' ? 'active' : ''}`}
+          >
+            Doar 8h
+          </button>
+        </div>
+
         <div className="toolbar-group-small">
           <button onClick={handlePrint} className="btn btn-secondary">
             <Printer size={16} />
@@ -119,13 +162,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             <tr>
               {/* Days 1-15 */}
               {daysInfo.slice(0, 15).map((d) => (
-                <th key={d.day} className={d.isWeekend ? 'weekend' : ''} style={{ fontSize: '8px', padding: '2px' }}>
+                <th key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`} style={{ fontSize: '8px', padding: '2px' }} title={d.isHoliday ? 'Sărbătoare Legală' : ''}>
                   {d.day}
                 </th>
               ))}
               {/* Days 16-31 */}
               {daysInfo.slice(15).map((d) => (
-                <th key={d.day} className={d.isWeekend ? 'weekend' : ''} style={{ fontSize: '8px', padding: '2px' }}>
+                <th key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`} style={{ fontSize: '8px', padding: '2px' }} title={d.isHoliday ? 'Sărbătoare Legală' : ''}>
                   {d.day}
                 </th>
               ))}
@@ -136,7 +179,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {employees.map((emp, index) => {
+            {filteredEmployees.map((emp, index) => {
               const empShifts = shifts[emp.id] || {};
               const calcs = calculateEmployeeHours(emp, empShifts, year, month);
 
@@ -159,7 +202,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                     const shift = empShifts[d.day] || '-';
                     const hasWarning = warnings.some(w => w.employeeId === emp.id && w.day === d.day);
                     return (
-                      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
+                      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
                         <span className="print-only-value">{shift === '-' ? '' : shift}</span>
                         <select
                           value={shift}
@@ -167,9 +210,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                           className="no-print-select"
                         >
                           <option value="-">-</option>
-                          <option value="Z">Z</option>
-                          <option value="N">N</option>
-                          <option value="8">8</option>
+                          {(shift !== 'CO' && shift !== 'CIC') && (
+                            <>
+                              {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
+                              {emp.shiftPattern !== '8h' && <option value="N">N</option>}
+                              <option value="8">8</option>
+                            </>
+                          )}
                           <option value="CO">CO</option>
                           <option value="CIC">CIC</option>
                         </select>
@@ -185,7 +232,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                     const shift = empShifts[d.day] || '-';
                     const hasWarning = warnings.some(w => w.employeeId === emp.id && w.day === d.day);
                     return (
-                      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
+                      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
                         <span className="print-only-value">{shift === '-' ? '' : shift}</span>
                         <select
                           value={shift}
@@ -193,9 +240,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                           className="no-print-select"
                         >
                           <option value="-">-</option>
-                          <option value="Z">Z</option>
-                          <option value="N">N</option>
-                          <option value="8">8</option>
+                          {(shift !== 'CO' && shift !== 'CIC') && (
+                            <>
+                              {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
+                              {emp.shiftPattern !== '8h' && <option value="N">N</option>}
+                              <option value="8">8</option>
+                            </>
+                          )}
                           <option value="CO">CO</option>
                           <option value="CIC">CIC</option>
                         </select>

@@ -4,28 +4,28 @@ import { autoGenerateSchedule, validateSchedule } from './utils/scheduler';
 import type { ValidationWarning, SchedulerRequirements } from './utils/scheduler';
 import { StaffManager } from './components/StaffManager';
 import { ScheduleTable } from './components/ScheduleTable';
-import { Calendar, Settings } from 'lucide-react';
+import { Calendar, Settings, X } from 'lucide-react';
 
 const INITIAL_ROSTER: Employee[] = [
-  { id: '1', name: 'APOSTOL FLORENTINA', role: 'AS', contractHours: 128, active: true },
-  { id: '2', name: 'ARSENIE TATIANA', role: 'AS', contractHours: 120, active: true },
-  { id: '3', name: 'BOLOHAN CARMEN', role: 'AS', contractHours: 168, active: true },
-  { id: '4', name: 'BUTA VALENTINA', role: 'AS', contractHours: 88, active: true },
-  { id: '5', name: 'IRINA DANIELA', role: 'AS', contractHours: 104, active: true },
-  { id: '6', name: 'NISTOR LĂCRĂMIOARA', role: 'AS', contractHours: 112, active: true },
-  { id: '7', name: 'TÂRPESCU DANA', role: 'AS', contractHours: 128, active: true },
-  { id: '8', name: 'ȘERBAN MONICA', role: 'AS', contractHours: 88, active: true },
-  { id: '9', name: 'VASILIU FLORIN', role: 'AS', contractHours: 128, active: true },
-  { id: '10', name: 'INSURĂȚELU CRISTINA', role: 'AS', contractHours: 168, active: true },
-  { id: '11', name: 'APOSTOL ELENA', role: 'AS', contractHours: 168, active: true },
-  { id: '12', name: 'CRIȘU TUDORIȚA', role: 'AS', contractHours: 168, active: true },
-  { id: '13', name: 'GRIGORE GABRIELA', role: 'AS', contractHours: 168, active: true },
-  { id: '14', name: 'IRIMIA MIHAELA', role: 'AS', contractHours: 168, active: true },
-  { id: '15', name: 'ELEFTERIU MIHAELA', role: 'AS', contractHours: 168, active: true },
-  { id: '16', name: 'CLIMINTE LUMINIȚA', role: 'AS', contractHours: 128, active: true },
-  { id: '17', name: 'GRECU MIRELA', role: 'AS', contractHours: 168, active: true },
-  { id: '18', name: 'DAMIAN ANA MARIA', role: 'AS', contractHours: 140, active: true },
-  { id: '19', name: 'UNGUREANU SERGIU', role: 'MED', contractHours: 140, active: true }
+  { id: '1', name: 'APOSTOL FLORENTINA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
+  { id: '2', name: 'ARSENIE TATIANA', role: 'AS', norm: 0.7, active: true, shiftPattern: 'normal' },
+  { id: '3', name: 'BOLOHAN CARMEN', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '4', name: 'BUTA VALENTINA', role: 'AS', norm: 0.5, active: true, shiftPattern: 'normal' },
+  { id: '5', name: 'IRINA DANIELA', role: 'AS', norm: 0.6, active: true, shiftPattern: 'normal' },
+  { id: '6', name: 'NISTOR LĂCRĂMIOARA', role: 'AS', norm: 0.65, active: true, shiftPattern: 'normal' },
+  { id: '7', name: 'TÂRPESCU DANA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
+  { id: '8', name: 'ȘERBAN MONICA', role: 'AS', norm: 0.5, active: true, shiftPattern: 'normal' },
+  { id: '9', name: 'VASILIU FLORIN', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
+  { id: '10', name: 'INSURĂȚELU CRISTINA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '11', name: 'APOSTOL ELENA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '12', name: 'CRIȘU TUDORIȚA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '13', name: 'GRIGORE GABRIELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '14', name: 'IRIMIA MIHAELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '15', name: 'ELEFTERIU MIHAELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '16', name: 'CLIMINTE LUMINIȚA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
+  { id: '17', name: 'GRECU MIRELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
+  { id: '18', name: 'DAMIAN ANA MARIA', role: 'AS', norm: 0.8, active: true, shiftPattern: 'normal' },
+  { id: '19', name: 'UNGUREANU SERGIU', role: 'MED', norm: 0.8, active: true, shiftPattern: 'normal' }
 ];
 
 function App() {
@@ -33,7 +33,33 @@ function App() {
     const saved = localStorage.getItem('spital_employees');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Migrate legacy employees that have contractHours but no norm
+        const migrated = parsed.map((emp: any) => {
+          if (emp.norm === undefined) {
+            let norm = 1.0;
+            const ch = emp.contractHours || 168;
+            if (ch >= 160) norm = 1.0;
+            else if (ch >= 135) norm = 0.8;
+            else if (ch >= 125) norm = 0.75;
+            else if (ch >= 115) norm = 0.7;
+            else if (ch >= 105) norm = 0.65;
+            else if (ch >= 95) norm = 0.6;
+            else norm = 0.5;
+            
+            return {
+              id: emp.id,
+              name: emp.name,
+              role: emp.role,
+              active: emp.active ?? true,
+              shiftPattern: emp.shiftPattern || 'normal',
+              norm
+            };
+          }
+          return emp;
+        });
+        localStorage.setItem('spital_employees', JSON.stringify(migrated));
+        return migrated;
       } catch (e) {
         console.error('Failed to parse employees', e);
       }
@@ -44,6 +70,13 @@ function App() {
 
   const [year, setYear] = useState<number>(2026);
   const [month, setMonth] = useState<number>(5); // June is 5 (0-indexed)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth > 1024);
+  
+  // Vacation Planner States
+  const [vacationEmpId, setVacationEmpId] = useState<string>('');
+  const [vacationType, setVacationType] = useState<'CO' | 'CIC'>('CO');
+  const [vacationStartDay, setVacationStartDay] = useState<number>(1);
+  const [vacationEndDay, setVacationEndDay] = useState<number>(1);
   
   const [shifts, setShifts] = useState<{ [employeeId: string]: { [day: number]: ShiftType } }>(() => {
     const saved = localStorage.getItem('spital_shifts_2026_5');
@@ -121,6 +154,30 @@ function App() {
     saveShifts(updated);
   };
 
+  // Handle range vacation planning (CO/CIC)
+  const handleApplyVacation = () => {
+    if (!vacationEmpId) return;
+    if (vacationStartDay > vacationEndDay) {
+      alert("Ziua de început nu poate fi mai mare decât ziua de sfârșit!");
+      return;
+    }
+
+    const updated = { ...shifts };
+    if (!updated[vacationEmpId]) {
+      updated[vacationEmpId] = {};
+    }
+
+    for (let d = vacationStartDay; d <= vacationEndDay; d++) {
+      updated[vacationEmpId][d] = vacationType;
+    }
+
+    setShifts(updated);
+    saveShifts(updated);
+
+    const empName = employees.find(e => e.id === vacationEmpId)?.name || '';
+    alert(`S-a aplicat concediul de tip ${vacationType} pentru ${empName} în perioada ${vacationStartDay}-${vacationEndDay}.`);
+  };
+
   // Run the TS automatic scheduler algorithm
   const handleAutoGenerate = () => {
     const result = autoGenerateSchedule(employees, year, month, shifts, reqs);
@@ -164,18 +221,130 @@ function App() {
     });
   };
 
+  // Update staff member fields (e.g. shiftPattern, norm, role)
+  const handleUpdateEmployee = (id: string, updatedFields: Partial<Employee>) => {
+    const updated = employees.map((emp) => {
+      if (emp.id === id) {
+        return { ...emp, ...updatedFields };
+      }
+      return emp;
+    });
+    setEmployees(updated);
+    localStorage.setItem('spital_employees', JSON.stringify(updated));
+  };
+
+  // Get days list for the active month to populate vacation date dropdowns
+  const dateObj = new Date(year, month + 1, 0);
+  const numDays = dateObj.getDate();
+  const daysList = Array.from({ length: numDays }, (_, i) => i + 1);
+
   return (
     <div className="app-container">
+      {/* Mobile Sidebar Backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="no-print sidebar-backdrop"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
       {/* Main Dashboard Layout */}
-      <div className="dashboard-grid">
+      <div className={`dashboard-grid ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         {/* Left Side Controls (Staff & Requirements) */}
-        <div className="sidebar-container">
+        <div className="sidebar-container no-print">
+          {/* Modal close button */}
+          <button 
+            className="modal-close-btn no-print"
+            onClick={() => setIsSidebarOpen(false)}
+            title="Închide"
+          >
+            <X size={20} />
+          </button>
           
-          <StaffManager
-            employees={employees}
-            onAddEmployee={handleAddEmployee}
-            onRemoveEmployee={handleRemoveEmployee}
-          />
+          <div className="left-column">
+            <StaffManager
+              employees={employees}
+              onAddEmployee={handleAddEmployee}
+              onRemoveEmployee={handleRemoveEmployee}
+              onUpdateEmployee={handleUpdateEmployee}
+              year={year}
+              month={month}
+            />
+
+            {/* Vacation Planner Card */}
+            <div className="card no-print">
+              <div className="card-title">
+                <span>Planificare Concediu (CO / CIC)</span>
+                <Calendar size={18} />
+              </div>
+              
+              <div className="staff-form">
+                <div className="form-group">
+                  <label htmlFor="vacation-employee">Angajat</label>
+                  <select
+                    id="vacation-employee"
+                    value={vacationEmpId}
+                    onChange={(e) => setVacationEmpId(e.target.value)}
+                  >
+                    <option value="">Alege angajat...</option>
+                    {employees.filter(e => e.active).map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({e.role})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="staff-form-row">
+                  <div className="form-group">
+                    <label htmlFor="vacation-type">Tip Concediu</label>
+                    <select
+                      id="vacation-type"
+                      value={vacationType}
+                      onChange={(e) => setVacationType(e.target.value as 'CO' | 'CIC')}
+                    >
+                      <option value="CO">CO (Odihnă)</option>
+                      <option value="CIC">CIC (Creștere Copil)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="vacation-start">De la ziua</label>
+                    <select
+                      id="vacation-start"
+                      value={vacationStartDay}
+                      onChange={(e) => setVacationStartDay(Number(e.target.value))}
+                    >
+                      {daysList.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="vacation-end">Până la ziua</label>
+                    <select
+                      id="vacation-end"
+                      value={vacationEndDay}
+                      onChange={(e) => setVacationEndDay(Number(e.target.value))}
+                    >
+                      {daysList.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleApplyVacation}
+                  disabled={!vacationEmpId}
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  Aplică Concediu
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Coverage Configuration panel */}
           <div className="card no-print">
@@ -287,6 +456,8 @@ function App() {
             warnings={warnings}
             onShiftChange={handleShiftChange}
             onAutoGenerate={handleAutoGenerate}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            isSidebarOpen={isSidebarOpen}
             onClearSchedule={handleClearSchedule}
           />
           
