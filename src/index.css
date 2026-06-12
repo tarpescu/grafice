@@ -2,7 +2,7 @@
 
 :root {
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  
+
   /* Color Palette - Premium Medical Blue/Teal */
   --color-bg: #f8fafc;
   --color-card: #ffffff;
@@ -12,16 +12,23 @@
   --color-text: #1e293b;
   --color-text-secondary: #64748b;
   --color-border: #e2e8f0;
-  
+
   /* Shift Colors */
-  --color-shift-z: #38bdf8; /* Zi - Light blue */
-  --color-shift-n: #1e1b4b; /* Noapte - Dark indigo */
-  --color-shift-8: #0ea5e9; /* 8h - Cyan */
-  --color-shift-co: #22c55e; /* Concediu Odihna - Green */
-  --color-shift-cic: #a855f7; /* Concediu copil - Purple */
-  --color-shift-off: #f1f5f9; /* Day off - Light gray */
-  --color-shift-err: #ef4444; /* Error - Red */
-  
+  --color-shift-z: #38bdf8;
+  /* Zi - Light blue */
+  --color-shift-n: #1e1b4b;
+  /* Noapte - Dark indigo */
+  --color-shift-8: #0ea5e9;
+  /* 8h - Cyan */
+  --color-shift-co: #22c55e;
+  /* Concediu Odihna - Green */
+  --color-shift-cic: #a855f7;
+  /* Concediu copil - Purple */
+  --color-shift-off: #f1f5f9;
+  /* Day off - Light gray */
+  --color-shift-err: #ef4444;
+  /* Error - Red */
+
   /* Shadows & Radius */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -118,8 +125,13 @@ header {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalSlideUp {
@@ -127,6 +139,7 @@ header {
     transform: translate(-50%, -46%) scale(0.96);
     opacity: 0;
   }
+
   to {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
@@ -150,11 +163,12 @@ header {
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-lg);
   z-index: 1000;
-  padding: 3rem 2rem 2rem 2rem !important; /* Spacing for the absolute close button */
+  padding: 3rem 2rem 2rem 2rem !important;
+  /* Spacing for the absolute close button */
   overflow-y: auto;
   border: 1px solid var(--color-border);
   animation: modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  
+
   display: grid !important;
   grid-template-columns: 1.2fr 1fr;
   gap: 1.5rem;
@@ -207,9 +221,9 @@ header {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-    word-wrap: break-word;
+  word-wrap: break-word;
   overflow-wrap: break-word;
-  white-space: normal; 
+  white-space: normal;
 }
 
 .card-title {
@@ -226,15 +240,17 @@ header {
 /* Containerul care ține cardurile */
 .cards-container {
   display: flex;
-  flex-wrap: wrap; /* Cardurile se vor aranja pe rânduri noi dacă nu au loc */
-  gap: 1.5rem;     /* Spațiul dintre carduri */
+  flex-wrap: wrap;
+  /* Cardurile se vor aranja pe rânduri noi dacă nu au loc */
+  gap: 1.5rem;
+  /* Spațiul dintre carduri */
 }
 
 /* Form Styles */
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0,5rem;
+  gap: 0, 5rem;
 }
 
 label {
@@ -243,7 +259,8 @@ label {
   color: var(--color-text-secondary);
 }
 
-input, select {
+input,
+select {
   font-family: inherit;
   padding: 0.625rem 0.75rem;
   border-radius: var(--radius-sm);
@@ -257,7 +274,8 @@ input, select {
   min-width: 0;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   border-color: var(--color-primary);
 }
 
@@ -363,7 +381,8 @@ input:focus, select:focus {
   text-align: center;
 }
 
-.schedule-table th, .schedule-table td {
+.schedule-table th,
+.schedule-table td {
   border: 1px solid var(--color-border);
   padding: 0.2rem 0.1rem;
   min-width: 20px;
@@ -378,7 +397,8 @@ input:focus, select:focus {
   z-index: 10;
 }
 
-.schedule-table th.col-name, .schedule-table td.col-name {
+.schedule-table th.col-name,
+.schedule-table td.col-name {
   text-align: left;
   min-width: 130px;
   font-weight: 500;
@@ -393,7 +413,8 @@ input:focus, select:focus {
 }
 
 .schedule-table td.weekend {
-  background-color: #fef08a; /* Soft yellow for weekend */
+  background-color: #fef08a;
+  /* Soft yellow for weekend */
 }
 
 /* Cells formatting based on shift type */
@@ -481,8 +502,8 @@ input:focus, select:focus {
   }
 
   /* Hide navigation controls, sidebars, headers */
-  header, 
-  .dashboard-grid > :first-child,
+  header,
+  .dashboard-grid> :first-child,
   .warnings-container,
   .no-print {
     display: none !important;
@@ -516,24 +537,26 @@ input:focus, select:focus {
     width: 100% !important;
   }
 
-  .schedule-table th, .schedule-table td {
+  .schedule-table th,
+  .schedule-table td {
     border: 1px solid #000000 !important;
     padding: 2px !important;
     color: black !important;
     background-color: transparent !important;
   }
 
-  .schedule-table th.col-name, .schedule-table td.col-name {
+  .schedule-table th.col-name,
+  .schedule-table td.col-name {
     position: static !important;
     background: transparent !important;
   }
 
   /* Clean up shift backgrounds in print for legibility */
-  .shift-cell.shift-Z, 
-  .shift-cell.shift-8, 
-  .shift-cell.shift-4, 
-  .shift-cell.shift-N, 
-  .shift-cell.shift-CO, 
+  .shift-cell.shift-Z,
+  .shift-cell.shift-8,
+  .shift-cell.shift-4,
+  .shift-cell.shift-N,
+  .shift-cell.shift-CO,
   .shift-cell.shift-CIC {
     background-color: transparent !important;
     color: black !important;
@@ -572,6 +595,7 @@ input:focus, select:focus {
   .print-only-value {
     display: inline-block !important;
   }
+
   .no-print-select {
     display: none !important;
   }
@@ -780,12 +804,6 @@ input:focus, select:focus {
   margin: 0;
 }
 
-.staff-meta-hours {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  margin-left: 0;
-}
-
 .staff-meta-pattern {
   font-size: 0.7rem;
   padding: 0.1rem 0.3rem;
@@ -863,39 +881,6 @@ input:focus, select:focus {
   border: 1px solid var(--color-border);
 }
 
-/* Inline Staff Selectors (Badges Dropdowns) */
-.staff-select-inline {
-  font-family: var(--font-family);
-  font-size: 0.775rem; /* Larger text size */
-  font-weight: 600;
-  padding: 0.35rem 1.5rem 0.35rem 0.6rem; /* Left padding for text, right padding to accommodate arrow */
-  border-radius: 6px; /* More modern rounded corners */
-  border: 1px solid transparent;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.2s ease;
-  margin-right: 0;
-}
-
-.staff-select-inline:hover {
-  filter: brightness(0.95);
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-.staff-select-role-as {
-  background: #e0f2fe;
-  color: #0284c7;
-  min-width: 65px;
-  text-align-last: center;
-}
-
-.staff-select-role-med {
-  background: #fee2e2;
-  color: #ef4444;
-  min-width: 65px;
-  text-align-last: center;
-}
-
 .staff-select-pattern-normal {
   background: #f3f4f6;
   color: #4b5563;
@@ -924,7 +909,8 @@ input:focus, select:focus {
 /* Legal Holiday cells highlighting */
 .schedule-table th.legal-holiday,
 .schedule-table td.legal-holiday {
-  background-color: #ffe4e6 !important; /* Soft rose color */
+  background-color: #ffe4e6 !important;
+  /* Soft rose color */
   color: #e11d48;
 }
 
@@ -1264,7 +1250,7 @@ input:focus, select:focus {
   line-height: 1.2;
   pointer-events: none;
   z-index: 2;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .month-selector-sub-toolbar {
@@ -1278,7 +1264,7 @@ input:focus, select:focus {
   font-size: 0.75rem !important;
 }
 
-.vacation-calendar-grid th, 
+.vacation-calendar-grid th,
 .vacation-calendar-grid td {
   padding: 3px 1px !important;
 }
@@ -1289,8 +1275,8 @@ input:focus, select:focus {
     font-size: 8px !important;
     width: 100% !important;
   }
-  
-  .vacation-calendar-grid th, 
+
+  .vacation-calendar-grid th,
   .vacation-calendar-grid td {
     border: 1px solid #000000 !important;
     padding: 2px 1px !important;
@@ -1345,4 +1331,3 @@ input:focus, select:focus {
   align-self: flex-end;
   flex: 1 1 150px;
 }
-

@@ -386,8 +386,6 @@ function App() {
               onAddEmployee={handleAddEmployee}
               onRemoveEmployee={handleRemoveEmployee}
               onUpdateEmployee={handleUpdateEmployee}
-              year={year}
-              month={month}
             />
 
 

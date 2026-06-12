@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import type { Employee } from '../utils/calculations';
-import { getWorkingDaysCount } from '../utils/calculations';
 import { UserPlus, Trash2, Users } from 'lucide-react';
 
 interface StaffManagerProps {
@@ -8,8 +7,6 @@ interface StaffManagerProps {
   onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
   onRemoveEmployee: (id: string) => void;
   onUpdateEmployee: (id: string, updatedFields: Partial<Employee>) => void;
-  year: number;
-  month: number;
 }
 
 export const StaffManager: React.FC<StaffManagerProps> = ({
@@ -17,13 +14,9 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   onAddEmployee,
   onRemoveEmployee,
   onUpdateEmployee,
-  year,
-  month,
 }) => {
   const [name, setName] = useState('');
   const [shiftPattern, setShiftPattern] = useState<'normal' | '8h'>('normal');
-
-  const workingDays = getWorkingDaysCount(year, month);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +44,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           <input
             id="staff-name"
             type="text"
-            placeholder="Ex: APOSTOL FLORENTINA"
+            placeholder="Ex: POPESCU IONELA"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -88,11 +81,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
               <div className="staff-info">
                 <h4>{emp.name}</h4>
                 <div className="staff-meta">
-                  {/* Role Badge */}
-                  <span className="staff-select-inline staff-select-role-as" style={{ cursor: 'default' }}>
-                    AS
-                  </span>
-
                   {/* Shift Pattern Selector Badge */}
                   <select
                     value={emp.shiftPattern || 'normal'}
@@ -103,9 +91,6 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     <option value="8h">Doar 8h</option>
                   </select>
 
-                  <span className="staff-meta-hours">
-                    ({workingDays * 8}h)
-                  </span>
                 </div>
               </div>
               <button
