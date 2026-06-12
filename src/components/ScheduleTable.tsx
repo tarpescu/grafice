@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth, calculateEmployeeHours } from '../utils/calculations';
-import { Printer, AlertTriangle, FileDown, Menu, ChevronLeft, Trash2 } from 'lucide-react';
+import { Printer, AlertTriangle, FileDown, Menu, ChevronLeft, Trash2, Upload, Download } from 'lucide-react';
 import type { ValidationWarning } from '../utils/scheduler';
 
 interface ScheduleTableProps {
@@ -16,6 +16,7 @@ interface ScheduleTableProps {
   onClearAll: () => void;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
+  onImportShifts: (shifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
 
 export const ScheduleTable: React.FC<ScheduleTableProps> = ({
@@ -30,6 +31,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   onClearAll,
   isSidebarOpen,
   onToggleSidebar,
+  onImportShifts,
 }) => {
   const daysInfo = getDaysInMonth(year, month);
   const monthNames = [
@@ -47,6 +49,79 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
     document.title = `${formattedMonth}-${year}`;
     window.print();
     document.title = originalTitle;
+  };
+
+  const handleExportShifts = () => {
+    const dataToExport = {
+      type: 'grafic-ture',
+      year,
+      month,
+      shifts
+    };
+    const romanianMonths = [
+      'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+      'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
+    ];
+    const fileName = `grafic-${romanianMonths[month]}-${year}.json`;
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(dataToExport, null, 2)
+    )}`;
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', jsonString);
+    downloadAnchor.setAttribute('download', fileName);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportShiftsClick = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+          
+           let importedShifts = data.shifts;
+          const importedYear = data.year;
+          const importedMonth = data.month;
+          
+          if (!importedShifts && !data.type) {
+            importedShifts = data;
+          }
+          
+          if (!importedShifts || typeof importedShifts !== 'object') {
+            alert('Datele din fișier sunt invalide!');
+            return;
+          }
+          
+          const romanianMonths = [
+            'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+            'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
+          ];
+          
+          if (importedYear !== undefined && importedMonth !== undefined) {
+            if (importedYear !== year || importedMonth !== month) {
+              const confirmImport = window.confirm(
+                `Avertisment: Fișierul selectat conține date pentru ${romanianMonths[importedMonth]} ${importedYear}, iar luna activă este ${romanianMonths[month]} ${year}.\n\nSigur doriți să importați aceste date?`
+              );
+              if (!confirmImport) return;
+            }
+          }
+          
+          onImportShifts(importedShifts);
+          alert('Graficul de ture a fost importat cu succes!');
+        } catch {
+          alert('Fișierul selectat nu este un JSON valid sau este corupt!');
+        }
+      };
+      reader.readAsText(file);
+    };
+    fileInput.click();
   };
 
   return (
@@ -78,6 +153,14 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
 
 
         <div className="toolbar-group-small">
+          <button onClick={handleImportShiftsClick} className="btn btn-secondary" title="Importă grafic de ture din fișier JSON">
+            <Upload size={16} />
+            Importă Ture
+          </button>
+          <button onClick={handleExportShifts} className="btn btn-secondary" title="Exportă grafic de ture în format JSON">
+            <Download size={16} />
+            Exportă Ture
+          </button>
           <button onClick={handlePrint} className="btn btn-secondary">
             <Printer size={16} />
             Imprimă

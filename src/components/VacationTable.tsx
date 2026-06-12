@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth } from '../utils/calculations';
-import { Printer, FileDown, Trash2, CalendarRange, Table2 } from 'lucide-react';
+import { Printer, FileDown, Trash2, CalendarRange, Table2, Upload, Download } from 'lucide-react';
 
 export interface EmployeeVacationInfo {
   jobTitle: string;
@@ -34,6 +34,7 @@ interface VacationTableProps {
   onBatchShiftChange: (employeeId: string, days: { day: number; shift: ShiftType }[]) => void;
   activeMonth: number;
   setActiveMonth: (month: number) => void;
+  onImportVacations: (vacationShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
 
 export const VacationTable: React.FC<VacationTableProps> = ({
@@ -49,6 +50,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
   onBatchShiftChange,
   activeMonth,
   setActiveMonth,
+  onImportVacations,
 }) => {
   const [subTab, setSubTab] = useState<'anual' | 'lunar'>('anual');
 
@@ -71,6 +73,95 @@ export const VacationTable: React.FC<VacationTableProps> = ({
     document.title = subTab === 'anual' ? `programare-concedii-anual-${year}` : `grafic-concedii-${monthNames[activeMonth].toLowerCase()}-${year}`;
     window.print();
     document.title = originalTitle;
+  };
+
+  const handleExportVacations = () => {
+    const vacationShifts: { [employeeId: string]: { [day: number]: ShiftType } } = {};
+    Object.keys(shifts).forEach((empId) => {
+      const empShifts = shifts[empId] || {};
+      const empVacations: { [day: number]: ShiftType } = {};
+      Object.keys(empShifts).forEach((dStr) => {
+        const day = Number(dStr);
+        const shift = empShifts[day];
+        if (shift === 'CO' || shift === 'CIC') {
+          empVacations[day] = shift;
+        }
+      });
+      if (Object.keys(empVacations).length > 0) {
+        vacationShifts[empId] = empVacations;
+      }
+    });
+
+    const dataToExport = {
+      type: 'grafic-concedii',
+      year,
+      month: activeMonth,
+      shifts: vacationShifts
+    };
+    const romanianMonths = [
+      'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+      'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
+    ];
+    const fileName = `grafic-concedii-${romanianMonths[activeMonth]}-${year}.json`;
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(dataToExport, null, 2)
+    )}`;
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', jsonString);
+    downloadAnchor.setAttribute('download', fileName);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportVacationsClick = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+          
+          let importedShifts = data.shifts;
+          const importedYear = data.year;
+          const importedMonth = data.month;
+          
+          if (!importedShifts && !data.type) {
+            importedShifts = data;
+          }
+          
+          if (!importedShifts || typeof importedShifts !== 'object') {
+            alert('Datele din fișier sunt invalide!');
+            return;
+          }
+          
+          const romanianMonths = [
+            'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+            'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
+          ];
+          
+          if (importedYear !== undefined && importedMonth !== undefined) {
+            if (importedYear !== year || importedMonth !== activeMonth) {
+              const confirmImport = window.confirm(
+                `Avertisment: Fișierul selectat conține concedii pentru ${romanianMonths[importedMonth]} ${importedYear}, iar luna activă selectată este ${romanianMonths[activeMonth]} ${year}.\n\nSigur doriți să importați aceste concedii?`
+              );
+              if (!confirmImport) return;
+            }
+          }
+          
+          onImportVacations(importedShifts);
+          alert('Planificarea de concedii a fost importată cu succes!');
+        } catch {
+          alert('Fișierul selectat nu este un JSON valid sau este corupt!');
+        }
+      };
+      reader.readAsText(file);
+    };
+    fileInput.click();
   };
 
   // Helper to load all shifts from memory & localStorage to calculate scheduled CO days
@@ -185,18 +276,28 @@ export const VacationTable: React.FC<VacationTableProps> = ({
 
         <div className="toolbar-group-small">
           {subTab === 'lunar' && (
-            <div className="month-selector-sub-toolbar">
-              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>Luna:</span>
-              <select 
-                value={activeMonth} 
-                onChange={(e) => setActiveMonth(Number(e.target.value))}
-                style={{ padding: '0.35rem 0.5rem', fontSize: '0.85rem', width: '130px' }}
-              >
-                {monthNames.map((name, idx) => (
-                  <option key={idx} value={idx}>{name}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="month-selector-sub-toolbar">
+                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>Luna:</span>
+                <select 
+                  value={activeMonth} 
+                  onChange={(e) => setActiveMonth(Number(e.target.value))}
+                  style={{ padding: '0.35rem 0.5rem', fontSize: '0.85rem', width: '130px' }}
+                >
+                  {monthNames.map((name, idx) => (
+                    <option key={idx} value={idx}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <button onClick={handleImportVacationsClick} className="btn btn-secondary" title="Importă planificare concedii din fișier JSON">
+                <Upload size={16} />
+                Importă Concedii
+              </button>
+              <button onClick={handleExportVacations} className="btn btn-secondary" title="Exportă planificare concedii în format JSON">
+                <Download size={16} />
+                Exportă Concedii
+              </button>
+            </>
           )}
           <button onClick={handlePrint} className="btn btn-secondary">
             <Printer size={16} />

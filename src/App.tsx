@@ -250,6 +250,41 @@ function App() {
     saveShifts(updated);
   };
 
+  const handleImportShifts = (importedShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => {
+    setShifts(importedShifts);
+    saveShifts(importedShifts);
+  };
+
+  const handleImportVacations = (importedVacationShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => {
+    setShifts((prev) => {
+      const updated = { ...prev };
+      const allEmpIds = new Set([
+        ...employees.map(e => e.id),
+        ...Object.keys(importedVacationShifts)
+      ]);
+
+      allEmpIds.forEach((empId) => {
+        const currentEmpShifts = { ...(updated[empId] || {}) };
+        const importedEmpShifts = importedVacationShifts[empId] || {};
+
+        for (let day = 1; day <= 31; day++) {
+          const importedShift = importedEmpShifts[day];
+          const currentShift = currentEmpShifts[day] || '-';
+
+          if (importedShift === 'CO' || importedShift === 'CIC') {
+            currentEmpShifts[day] = importedShift;
+          } else if (currentShift === 'CO' || currentShift === 'CIC') {
+            currentEmpShifts[day] = '-';
+          }
+        }
+        updated[empId] = currentEmpShifts;
+      });
+
+      saveShifts(updated);
+      return updated;
+    });
+  };
+
   // Run the TS automatic scheduler algorithm
   const handleAutoGenerate = () => {
     const result = autoGenerateSchedule(employees, year, month, shifts, reqs);
@@ -491,6 +526,7 @@ function App() {
               isSidebarOpen={isSidebarOpen}
               onClearSchedule={handleClearSchedule}
               onClearAll={handleClearAll}
+              onImportShifts={handleImportShifts}
             />
           ) : (
             <VacationTable
@@ -506,6 +542,7 @@ function App() {
               onBatchShiftChange={handleBatchShiftChange}
               activeMonth={month}
               setActiveMonth={setMonth}
+              onImportVacations={handleImportVacations}
             />
           )}
           
