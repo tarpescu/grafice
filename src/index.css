@@ -418,6 +418,11 @@ input:focus, select:focus {
   color: #0369a1;
 }
 
+.shift-cell.shift-4 {
+  background-color: #ccfbf1;
+  color: #0f766e;
+}
+
 .shift-cell.shift-N {
   background-color: #e0e7ff;
   color: #3730a3;
@@ -526,6 +531,7 @@ input:focus, select:focus {
   /* Clean up shift backgrounds in print for legibility */
   .shift-cell.shift-Z, 
   .shift-cell.shift-8, 
+  .shift-cell.shift-4, 
   .shift-cell.shift-N, 
   .shift-cell.shift-CO, 
   .shift-cell.shift-CIC {

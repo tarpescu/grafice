@@ -31,19 +31,11 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   isSidebarOpen,
   onToggleSidebar,
 }) => {
-  const [filter, setFilter] = React.useState<'all' | 'normal' | '8h'>('all');
   const daysInfo = getDaysInMonth(year, month);
   const monthNames = [
     'IANUARIE', 'FEBRUARIE', 'MARTIE', 'APRILIE', 'MAI', 'IUNIE',
     'IULIE', 'AUGUST', 'SEPTEMBRIE', 'OCTOMBRIE', 'NOIEMBRIE', 'DECEMBRIE'
   ];
-
-  const filteredEmployees = employees.filter((emp) => {
-    if (filter === 'all') return true;
-    if (filter === 'normal') return emp.shiftPattern !== '8h';
-    if (filter === '8h') return emp.shiftPattern === '8h';
-    return true;
-  });
 
   const handlePrint = () => {
     window.print();
@@ -83,27 +75,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           </button>
         </div>
 
-        {/* Category Filter Selector Tabs */}
-        <div className="filter-tabs-container">
-          <button
-            onClick={() => setFilter('all')}
-            className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
-          >
-            Toți
-          </button>
-          <button
-            onClick={() => setFilter('normal')}
-            className={`filter-tab ${filter === 'normal' ? 'active' : ''}`}
-          >
-            Tura Normală
-          </button>
-          <button
-            onClick={() => setFilter('8h')}
-            className={`filter-tab ${filter === '8h' ? 'active' : ''}`}
-          >
-            Doar 8h
-          </button>
-        </div>
+
 
         <div className="toolbar-group-small">
           <button onClick={handlePrint} className="btn btn-secondary">
@@ -149,7 +121,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             </div>
           </div>
           <p className="print-only-header-p">
-            GRAFIC DE LUCRU ASISTENȚI / MEDICI
+            GRAFIC DE LUCRU ASISTENȚI
           </p>
         </div>
 
@@ -186,7 +158,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredEmployees.map((emp, index) => {
+            {employees.map((emp, index) => {
               const empShifts = shifts[emp.id] || {};
               const calcs = calculateEmployeeHours(emp, empShifts, year, month);
 
@@ -196,6 +168,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                 const s = empShifts[d.day] || '-';
                 if (s === 'Z' || s === 'N') subtotal1_15 += 12;
                 if (s === '8') subtotal1_15 += 8;
+                if (s === '4') subtotal1_15 += 4;
               });
 
               return (
@@ -222,6 +195,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                               {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
                               {emp.shiftPattern !== '8h' && <option value="N">N</option>}
                               <option value="8">8</option>
+                              <option value="4">4</option>
                             </>
                           )}
                           <option value="CO">CO</option>
@@ -252,6 +226,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                               {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
                               {emp.shiftPattern !== '8h' && <option value="N">N</option>}
                               <option value="8">8</option>
+                              <option value="4">4</option>
                             </>
                           )}
                           <option value="CO">CO</option>

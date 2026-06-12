@@ -1,13 +1,12 @@
 export interface Employee {
   id: string;
   name: string;
-  role: 'MED' | 'AS';
-  norm: number; // e.g. 1.0, 0.75, 0.5
+  role: 'AS';
   active: boolean;
   shiftPattern?: 'normal' | '8h';
 }
 
-export type ShiftType = 'Z' | 'N' | '8' | 'CO' | 'CIC' | 'L' | '-';
+export type ShiftType = 'Z' | 'N' | '8' | '4' | 'CO' | 'CIC' | 'L' | '-';
 
 export interface MonthSchedule {
   year: number;
@@ -75,9 +74,9 @@ export function getRomanianLegalHolidays(year: number): Set<string> {
   easterMonday.setDate(easter.getDate() + 1);
   holidays.add(formatDate(easterMonday));
 
-  // Pentecost Sunday & Monday (Rusalii) - 50 & 51 days after Easter
+  // Pentecost Sunday & Monday (Rusalii) - 49 & 50 days after Easter (7 weeks)
   const pentecostSunday = new Date(easter);
-  pentecostSunday.setDate(easter.getDate() + 50);
+  pentecostSunday.setDate(easter.getDate() + 49);
   holidays.add(formatDate(pentecostSunday));
 
   const pentecostMonday = new Date(pentecostSunday);
@@ -131,14 +130,14 @@ export interface EmployeeCalculations {
 }
 
 export function calculateEmployeeHours(
-  employee: Employee,
+  _employee: Employee,
   employeeShifts: { [day: number]: ShiftType },
   year: number,
   month: number
 ): EmployeeCalculations {
   const days = getDaysInMonth(year, month);
   const workingDays = getWorkingDaysCount(year, month);
-  const computedContractHours = Math.round(workingDays * 8 * employee.norm);
+  const computedContractHours = workingDays * 8;
 
   let totalWorked = 0;
   let nightHours = 0;
@@ -161,6 +160,10 @@ export function calculateEmployeeHours(
         break;
       case '8':
         shiftHours = 8;
+        shiftNight = 0;
+        break;
+      case '4':
+        shiftHours = 4;
         shiftNight = 0;
         break;
       case 'CO':

@@ -2,12 +2,13 @@ import type { Employee, ShiftType } from './calculations';
 import { getDaysInMonth, getWorkingDaysCount } from './calculations';
 
 export interface CoverageRequirement {
-  dayShifts: number;
-  nightShifts: number;
+  minDayShifts: number;
+  maxDayShifts: number;
+  minNightShifts: number;
+  maxNightShifts: number;
 }
 
 export interface SchedulerRequirements {
-  MED: CoverageRequirement;
   AS: CoverageRequirement;
 }
 
@@ -75,8 +76,7 @@ export function autoGenerateSchedule(
   month: number,
   lockedShifts: { [employeeId: string]: { [day: number]: ShiftType } } = {},
   requirements: SchedulerRequirements = {
-    MED: { dayShifts: 1, nightShifts: 1 },
-    AS: { dayShifts: 2, nightShifts: 2 },
+    AS: { minDayShifts: 2, maxDayShifts: 2, minNightShifts: 2, maxNightShifts: 2 },
   }
 ): { [employeeId: string]: { [day: number]: ShiftType } } {
   const days = getDaysInMonth(year, month);
@@ -88,7 +88,19 @@ export function autoGenerateSchedule(
   
   // Track accumulated hours per employee during generation
   const hoursTracker: { [employeeId: string]: number } = {};
-  
+
+  // Helper to count remaining active days for an employee starting from day `d`
+  const getRemainingActiveDays = (empId: string, startDay: number) => {
+    let count = 0;
+    for (let day = startDay; day <= days.length; day++) {
+      const locked = lockedShifts[empId]?.[day];
+      if (locked !== 'CO' && locked !== 'CIC') {
+        count++;
+      }
+    }
+    return Math.max(1, count); // Avoid division by zero
+  };
+
   // 1. Copy locked shifts first
   employees.forEach((emp) => {
     shifts[emp.id] = {};
@@ -100,6 +112,7 @@ export function autoGenerateSchedule(
         shifts[emp.id][dayInfo.day] = locked;
         if (locked === 'Z' || locked === 'N') hoursTracker[emp.id] += 12;
         if (locked === '8') hoursTracker[emp.id] += 8;
+        if (locked === '4') hoursTracker[emp.id] += 4;
       } else {
         shifts[emp.id][dayInfo.day] = '-';
       }
@@ -111,7 +124,7 @@ export function autoGenerateSchedule(
     if (emp.shiftPattern === '8h') {
       const coWeekdays = weekdays.filter(d => lockedShifts[emp.id]?.[d.day] === 'CO' || lockedShifts[emp.id]?.[d.day] === 'CIC').length;
       const adjustedWorkingDays = Math.max(0, workingDays - coWeekdays);
-      const targetShifts = Math.round(adjustedWorkingDays * emp.norm);
+      const targetShifts = adjustedWorkingDays;
 
       // Pre-schedule '8' on ALL days (weekdays and weekends) that are not locked
       days.forEach((dayInfo) => {
@@ -145,28 +158,36 @@ export function autoGenerateSchedule(
   days.forEach((dayInfo) => {
     const d = dayInfo.day;
 
-    (['MED', 'AS'] as const).forEach((role) => {
+    (['AS'] as const).forEach((role) => {
       const roleReq = requirements[role];
       const roleEmployees = employees.filter((emp) => emp.active && emp.role === role);
       const normalEmployees = roleEmployees.filter((emp) => emp.shiftPattern !== '8h');
 
-      // Count existing assigned/locked shifts for this role today
+      // Count existing assigned/locked shifts for this role today (excluding 8h employees from the day shift count)
       let assignedDayCount = 0;
       let assignedNightCount = 0;
       roleEmployees.forEach((emp) => {
         const existing = shifts[emp.id][d];
-        if (existing === 'Z' || existing === '8') assignedDayCount++;
+        if (emp.shiftPattern !== '8h') {
+          if (existing === 'Z' || existing === '8' || existing === '4') assignedDayCount++;
+        }
         if (existing === 'N') assignedNightCount++;
       });
 
-      // A. Schedule Night Shifts (N) - Stricter rest constraints
-      const nightsNeeded = Math.max(0, roleReq.nightShifts - assignedNightCount);
-      for (let n = 0; n < nightsNeeded; n++) {
+      // A. Schedule Night Shifts (N)
+      // A1. Schedule up to minNightShifts (Hard requirement)
+      const minNightsNeeded = Math.max(0, roleReq.minNightShifts - assignedNightCount);
+      for (let n = 0; n < minNightsNeeded; n++) {
         const candidates = normalEmployees.filter((emp) => {
           if (shifts[emp.id][d] !== '-') return false; // Already has a shift today
           if (d > 1 && shifts[emp.id][d - 1] === 'N') return false; // Worked N yesterday (must rest day 1)
           if (d > 2 && shifts[emp.id][d - 2] === 'N') return false; // Worked N 2 days ago (must rest day 2)
           if (d < days.length && lockedShifts[emp.id]?.[d + 1] === 'N') return false; // Night shift locked tomorrow
+
+          // Strict hours check: adding 12 hours must not exceed target hours
+          const coWeekdays = weekdays.filter(day => lockedShifts[emp.id]?.[day.day] === 'CO' || lockedShifts[emp.id]?.[day.day] === 'CIC').length;
+          const targetHours = Math.max(0, workingDays - coWeekdays) * 8;
+          if (hoursTracker[emp.id] + 12 > targetHours) return false;
 
           return true;
         });
@@ -174,15 +195,24 @@ export function autoGenerateSchedule(
         if (candidates.length === 0) break;
 
         // Sort candidates:
-        // Priority to employees who worked Z yesterday (pattern continuation Z -> N)
+        // 1. Prioritize density of remaining active hours (higher density first)
+        // 2. Priority to employees who worked Z yesterday (pattern continuation Z -> N)
         candidates.sort((a, b) => {
           const coWeekdaysA = weekdays.filter(day => lockedShifts[a.id]?.[day.day] === 'CO' || lockedShifts[a.id]?.[day.day] === 'CIC').length;
           const coWeekdaysB = weekdays.filter(day => lockedShifts[b.id]?.[day.day] === 'CO' || lockedShifts[b.id]?.[day.day] === 'CIC').length;
-          const targetHoursA = Math.round(Math.max(0, workingDays - coWeekdaysA) * 8 * a.norm);
-          const targetHoursB = Math.round(Math.max(0, workingDays - coWeekdaysB) * 8 * b.norm);
+          const targetHoursA = Math.max(0, workingDays - coWeekdaysA) * 8;
+          const targetHoursB = Math.max(0, workingDays - coWeekdaysB) * 8;
           
-          const ratioA = targetHoursA > 0 ? hoursTracker[a.id] / targetHoursA : 0;
-          const ratioB = targetHoursB > 0 ? hoursTracker[b.id] / targetHoursB : 0;
+          const remainingActiveDaysA = getRemainingActiveDays(a.id, d);
+          const remainingActiveDaysB = getRemainingActiveDays(b.id, d);
+
+          const densityA = (targetHoursA - hoursTracker[a.id]) / remainingActiveDaysA;
+          const densityB = (targetHoursB - hoursTracker[b.id]) / remainingActiveDaysB;
+
+          // Prioritize density first if there is a significant difference in hours needed per active day
+          if (Math.abs(densityA - densityB) > 0.5) {
+            return densityB - densityA;
+          }
 
           const workedZYesterdayA = d > 1 && shifts[a.id][d - 1] === 'Z';
           const workedZYesterdayB = d > 1 && shifts[b.id][d - 1] === 'Z';
@@ -190,7 +220,58 @@ export function autoGenerateSchedule(
           if (workedZYesterdayA && !workedZYesterdayB) return -1;
           if (!workedZYesterdayA && workedZYesterdayB) return 1;
 
-          return ratioA - ratioB + (Math.random() * 0.1 - 0.05);
+          return densityB - densityA + (Math.random() * 0.1 - 0.05);
+        });
+
+        const selected = candidates[0];
+        shifts[selected.id][d] = 'N';
+        hoursTracker[selected.id] += 12;
+        assignedNightCount++;
+      }
+
+      // A2. Schedule additional night shifts up to maxNightShifts (Soft requirement: only if candidates are under target hours)
+      const maxNightsNeeded = Math.max(0, Math.max(roleReq.minNightShifts, roleReq.maxNightShifts) - assignedNightCount);
+      for (let n = 0; n < maxNightsNeeded; n++) {
+        const candidates = normalEmployees.filter((emp) => {
+          if (shifts[emp.id][d] !== '-') return false;
+          if (d > 1 && shifts[emp.id][d - 1] === 'N') return false;
+          if (d > 2 && shifts[emp.id][d - 2] === 'N') return false;
+          if (d < days.length && lockedShifts[emp.id]?.[d + 1] === 'N') return false;
+
+          // Soft constraint: only candidates who will NOT exceed their target hours
+          const coWeekdays = weekdays.filter(day => lockedShifts[emp.id]?.[day.day] === 'CO' || lockedShifts[emp.id]?.[day.day] === 'CIC').length;
+          const targetHours = Math.max(0, workingDays - coWeekdays) * 8;
+          if (hoursTracker[emp.id] + 12 > targetHours) return false;
+
+          return true;
+        });
+
+        if (candidates.length === 0) break;
+
+        candidates.sort((a, b) => {
+          const coWeekdaysA = weekdays.filter(day => lockedShifts[a.id]?.[day.day] === 'CO' || lockedShifts[a.id]?.[day.day] === 'CIC').length;
+          const coWeekdaysB = weekdays.filter(day => lockedShifts[b.id]?.[day.day] === 'CO' || lockedShifts[b.id]?.[day.day] === 'CIC').length;
+          const targetHoursA = Math.max(0, workingDays - coWeekdaysA) * 8;
+          const targetHoursB = Math.max(0, workingDays - coWeekdaysB) * 8;
+          
+          const remainingActiveDaysA = getRemainingActiveDays(a.id, d);
+          const remainingActiveDaysB = getRemainingActiveDays(b.id, d);
+
+          const densityA = (targetHoursA - hoursTracker[a.id]) / remainingActiveDaysA;
+          const densityB = (targetHoursB - hoursTracker[b.id]) / remainingActiveDaysB;
+
+          // Prioritize density first if there is a significant difference in hours needed per active day
+          if (Math.abs(densityA - densityB) > 0.5) {
+            return densityB - densityA;
+          }
+
+          const workedZYesterdayA = d > 1 && shifts[a.id][d - 1] === 'Z';
+          const workedZYesterdayB = d > 1 && shifts[b.id][d - 1] === 'Z';
+
+          if (workedZYesterdayA && !workedZYesterdayB) return -1;
+          if (!workedZYesterdayA && workedZYesterdayB) return 1;
+
+          return densityB - densityA + (Math.random() * 0.1 - 0.05);
         });
 
         const selected = candidates[0];
@@ -200,11 +281,18 @@ export function autoGenerateSchedule(
       }
 
       // B. Schedule Day Shifts (Z)
-      const daysNeeded = Math.max(0, roleReq.dayShifts - assignedDayCount);
-      for (let df = 0; df < daysNeeded; df++) {
+      // B1. Schedule up to minDayShifts (Hard requirement)
+      const minDaysNeeded = Math.max(0, roleReq.minDayShifts - assignedDayCount);
+      for (let df = 0; df < minDaysNeeded; df++) {
         const candidates = normalEmployees.filter((emp) => {
           if (shifts[emp.id][d] !== '-') return false; // Already has a shift today
           if (d > 1 && shifts[emp.id][d - 1] === 'N') return false; // Cannot work day shift right after Night
+
+          // Strict hours check: adding minimum possible hours (12h on weekend, 4h on weekday) must not exceed target hours
+          const coWeekdays = weekdays.filter(day => lockedShifts[emp.id]?.[day.day] === 'CO' || lockedShifts[emp.id]?.[day.day] === 'CIC').length;
+          const targetHours = Math.max(0, workingDays - coWeekdays) * 8;
+          const minRequiredHours = dayInfo.isWeekend ? 12 : 4;
+          if (hoursTracker[emp.id] + minRequiredHours > targetHours) return false;
 
           return true;
         });
@@ -212,15 +300,24 @@ export function autoGenerateSchedule(
         if (candidates.length === 0) break;
 
         // Sort candidates:
-        // Priority to employees who completed their 2-day rest cycle after N (N -> - -> - -> Z)
+        // 1. Prioritize density of remaining active hours (higher density first)
+        // 2. Priority to employees who completed their 2-day rest cycle after N (N -> - -> - -> Z)
         candidates.sort((a, b) => {
           const coWeekdaysA = weekdays.filter(day => lockedShifts[a.id]?.[day.day] === 'CO' || lockedShifts[a.id]?.[day.day] === 'CIC').length;
           const coWeekdaysB = weekdays.filter(day => lockedShifts[b.id]?.[day.day] === 'CO' || lockedShifts[b.id]?.[day.day] === 'CIC').length;
-          const targetHoursA = Math.round(Math.max(0, workingDays - coWeekdaysA) * 8 * a.norm);
-          const targetHoursB = Math.round(Math.max(0, workingDays - coWeekdaysB) * 8 * b.norm);
+          const targetHoursA = Math.max(0, workingDays - coWeekdaysA) * 8;
+          const targetHoursB = Math.max(0, workingDays - coWeekdaysB) * 8;
           
-          const ratioA = targetHoursA > 0 ? hoursTracker[a.id] / targetHoursA : 0;
-          const ratioB = targetHoursB > 0 ? hoursTracker[b.id] / targetHoursB : 0;
+          const remainingActiveDaysA = getRemainingActiveDays(a.id, d);
+          const remainingActiveDaysB = getRemainingActiveDays(b.id, d);
+
+          const densityA = (targetHoursA - hoursTracker[a.id]) / remainingActiveDaysA;
+          const densityB = (targetHoursB - hoursTracker[b.id]) / remainingActiveDaysB;
+
+          // Prioritize density first if there is a significant difference in hours needed per active day
+          if (Math.abs(densityA - densityB) > 0.5) {
+            return densityB - densityA;
+          }
 
           const completedRestA = d > 3 && shifts[a.id][d - 3] === 'N' && shifts[a.id][d - 2] === '-' && shifts[a.id][d - 1] === '-';
           const completedRestB = d > 3 && shifts[b.id][d - 3] === 'N' && shifts[b.id][d - 2] === '-' && shifts[b.id][d - 1] === '-';
@@ -228,96 +325,93 @@ export function autoGenerateSchedule(
           if (completedRestA && !completedRestB) return -1;
           if (!completedRestA && completedRestB) return 1;
 
-          return ratioA - ratioB + (Math.random() * 0.1 - 0.05);
+          return densityB - densityA + (Math.random() * 0.1 - 0.05);
         });
 
         const selected = candidates[0];
         
-        // Decide shift type: Z (12h) or 8 (8h)
+        // Decide shift type: Z (12h), 8 (8h) or 4 (4h) based on remaining hours
         const shiftType: ShiftType = dayInfo.isWeekend
           ? 'Z'
           : (() => {
               const coWeekdays = weekdays.filter(day => lockedShifts[selected.id]?.[day.day] === 'CO' || lockedShifts[selected.id]?.[day.day] === 'CIC').length;
-              const targetHours = Math.round(Math.max(0, workingDays - coWeekdays) * 8 * selected.norm);
-              const ratio = targetHours > 0 ? hoursTracker[selected.id] / targetHours : 0;
-              return ratio < 0.75 ? 'Z' : '8';
+              const targetHours = Math.max(0, workingDays - coWeekdays) * 8;
+              const remaining = targetHours - hoursTracker[selected.id];
+              if (remaining >= 12) return 'Z';
+              if (remaining >= 8) return '8';
+              return '4';
             })();
 
         shifts[selected.id][d] = shiftType;
-        hoursTracker[selected.id] += shiftType === 'Z' ? 12 : 8;
+        if (shiftType === 'Z') hoursTracker[selected.id] += 12;
+        else if (shiftType === '8') hoursTracker[selected.id] += 8;
+        else if (shiftType === '4') hoursTracker[selected.id] += 4;
         assignedDayCount++;
       }
-    });
-  });
 
-  // 4. Perform Weekend Swaps for 8h employees to handle weekend day coverage
-  days.forEach((dayInfo) => {
-    if (!dayInfo.isWeekend) return;
-    const d = dayInfo.day;
+      // B2. Schedule additional day shifts up to maxDayShifts (Soft requirement: only if candidates are under target hours)
+      const maxDaysNeeded = Math.max(0, Math.max(roleReq.minDayShifts, roleReq.maxDayShifts) - assignedDayCount);
+      for (let df = 0; df < maxDaysNeeded; df++) {
+        const candidates = normalEmployees.filter((emp) => {
+          if (shifts[emp.id][d] !== '-') return false;
+          if (d > 1 && shifts[emp.id][d - 1] === 'N') return false;
 
-    (['MED', 'AS'] as const).forEach((role) => {
-      const roleReq = requirements[role];
-      const roleEmployees = employees.filter((emp) => emp.active && emp.role === role);
-      const shift8hEmployees = roleEmployees.filter((emp) => emp.shiftPattern === '8h');
+          // Soft constraint: only candidates who have not yet reached their target hours
+          // Soft constraint: only candidates who will NOT exceed their target hours
+          const coWeekdays = weekdays.filter(day => lockedShifts[emp.id]?.[day.day] === 'CO' || lockedShifts[emp.id]?.[day.day] === 'CIC').length;
+          const targetHours = Math.max(0, workingDays - coWeekdays) * 8;
+          const minRequiredHours = dayInfo.isWeekend ? 12 : 4;
+          if (hoursTracker[emp.id] + minRequiredHours > targetHours) return false;
 
-      // Calculate current day shifts coverage (Z + 8) on this weekend day
-      let assignedDayCount = 0;
-      roleEmployees.forEach((emp) => {
-        const shift = shifts[emp.id][d];
-        if (shift === 'Z' || shift === '8') assignedDayCount++;
-      });
+          return true;
+        });
 
-      // If coverage is not met, look for 8h employees to swap their shifts to weekend
-      const daysNeeded = Math.max(0, roleReq.dayShifts - assignedDayCount);
-      if (daysNeeded === 0) return;
+        if (candidates.length === 0) break;
 
-      for (let i = 0; i < daysNeeded; i++) {
-        const eligibleSwappers: { emp: Employee; weekdayToSwap: number }[] = [];
+        candidates.sort((a, b) => {
+          const coWeekdaysA = weekdays.filter(day => lockedShifts[a.id]?.[day.day] === 'CO' || lockedShifts[a.id]?.[day.day] === 'CIC').length;
+          const coWeekdaysB = weekdays.filter(day => lockedShifts[b.id]?.[day.day] === 'CO' || lockedShifts[b.id]?.[day.day] === 'CIC').length;
+          const targetHoursA = Math.max(0, workingDays - coWeekdaysA) * 8;
+          const targetHoursB = Math.max(0, workingDays - coWeekdaysB) * 8;
+          
+          const remainingActiveDaysA = getRemainingActiveDays(a.id, d);
+          const remainingActiveDaysB = getRemainingActiveDays(b.id, d);
 
-        shift8hEmployees.forEach((emp) => {
-          // Weekend day must be free and not locked
-          if (shifts[emp.id][d] !== '-') return;
-          if (lockedShifts[emp.id]?.[d]) return;
+          const densityA = (targetHoursA - hoursTracker[a.id]) / remainingActiveDaysA;
+          const densityB = (targetHoursB - hoursTracker[b.id]) / remainingActiveDaysB;
 
-          // Find nearby weekday (offset of -2 to +3 days) where they are scheduled to work '8' and not locked
-          const offsets = [-2, -1, 1, 2, 3];
-          for (const offset of offsets) {
-            const weekday = d + offset;
-            if (weekday < 1 || weekday > days.length) continue;
-            
-            const targetDayInfo = days[weekday - 1];
-            if (targetDayInfo.isWeekend) continue; // Must be a weekday
-
-            if (shifts[emp.id][weekday] === '8' && !lockedShifts[emp.id]?.[weekday]) {
-              eligibleSwappers.push({ emp, weekdayToSwap: weekday });
-              break; // Found weekday shift to swap for this employee
-            }
+          // Prioritize density first if there is a significant difference in hours needed per active day
+          if (Math.abs(densityA - densityB) > 0.5) {
+            return densityB - densityA;
           }
+
+          const completedRestA = d > 3 && shifts[a.id][d - 3] === 'N' && shifts[a.id][d - 2] === '-' && shifts[a.id][d - 1] === '-';
+          const completedRestB = d > 3 && shifts[b.id][d - 3] === 'N' && shifts[b.id][d - 2] === '-' && shifts[b.id][d - 1] === '-';
+
+          if (completedRestA && !completedRestB) return -1;
+          if (!completedRestA && completedRestB) return 1;
+
+          return densityB - densityA + (Math.random() * 0.1 - 0.05);
         });
 
-        if (eligibleSwappers.length === 0) break;
-
-        // Sort by lowest hours ratio to balance shifts
-        eligibleSwappers.sort((a, b) => {
-          const coWeekdaysA = weekdays.filter(day => lockedShifts[a.emp.id]?.[day.day] === 'CO' || lockedShifts[a.emp.id]?.[day.day] === 'CIC').length;
-          const coWeekdaysB = weekdays.filter(day => lockedShifts[b.emp.id]?.[day.day] === 'CO' || lockedShifts[b.emp.id]?.[day.day] === 'CIC').length;
-          const targetHoursA = Math.round(Math.max(0, workingDays - coWeekdaysA) * 8 * a.emp.norm);
-          const targetHoursB = Math.round(Math.max(0, workingDays - coWeekdaysB) * 8 * b.emp.norm);
-          
-          const ratioA = targetHoursA > 0 ? hoursTracker[a.emp.id] / targetHoursA : 0;
-          const ratioB = targetHoursB > 0 ? hoursTracker[b.emp.id] / targetHoursB : 0;
-          
-          return ratioA - ratioB;
-        });
-
-        const selected = eligibleSwappers[0];
+        const selected = candidates[0];
         
-        // Swap: 
-        // 1. Assign '8' to the weekend day
-        shifts[selected.emp.id][d] = '8';
-        // 2. Compensatory rest on the weekday
-        shifts[selected.emp.id][selected.weekdayToSwap] = '-';
-        
+        // Decide shift type: Z (12h), 8 (8h) or 4 (4h) based on remaining hours
+        const shiftType: ShiftType = dayInfo.isWeekend
+          ? 'Z'
+          : (() => {
+              const coWeekdays = weekdays.filter(day => lockedShifts[selected.id]?.[day.day] === 'CO' || lockedShifts[selected.id]?.[day.day] === 'CIC').length;
+              const targetHours = Math.max(0, workingDays - coWeekdays) * 8;
+              const remaining = targetHours - hoursTracker[selected.id];
+              if (remaining >= 12) return 'Z';
+              if (remaining >= 8) return '8';
+              return '4';
+            })();
+
+        shifts[selected.id][d] = shiftType;
+        if (shiftType === 'Z') hoursTracker[selected.id] += 12;
+        else if (shiftType === '8') hoursTracker[selected.id] += 8;
+        else if (shiftType === '4') hoursTracker[selected.id] += 4;
         assignedDayCount++;
       }
     });

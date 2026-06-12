@@ -281,7 +281,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
               <tbody>
                 {employees.map((emp, idx) => {
                   const info = vacationPlanning[emp.id] || {
-                    jobTitle: emp.role === 'MED' ? 'medic' : 'asistent pr.',
+                    jobTitle: 'asistent pr.',
                     seniorityTotal: '',
                     seniorityUnit: '',
                     vacationDaysAllowed: '',

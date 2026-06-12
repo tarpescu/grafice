@@ -10,24 +10,24 @@ import type { VacationPlanningState, VacationMetadata, EmployeeVacationInfo } fr
 import { Calendar, Settings, X } from 'lucide-react';
 
 const INITIAL_ROSTER: Employee[] = [
-  { id: '1', name: 'APOSTOL FLORENTINA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
-  { id: '2', name: 'ARSENIE TATIANA', role: 'AS', norm: 0.7, active: true, shiftPattern: 'normal' },
-  { id: '3', name: 'BOLOHAN CARMEN', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '4', name: 'BUTA VALENTINA', role: 'AS', norm: 0.5, active: true, shiftPattern: 'normal' },
-  { id: '5', name: 'IRINA DANIELA', role: 'AS', norm: 0.6, active: true, shiftPattern: 'normal' },
-  { id: '6', name: 'NISTOR LĂCRĂMIOARA', role: 'AS', norm: 0.65, active: true, shiftPattern: 'normal' },
-  { id: '7', name: 'TÂRPESCU DANA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
-  { id: '8', name: 'ȘERBAN MONICA', role: 'AS', norm: 0.5, active: true, shiftPattern: 'normal' },
-  { id: '9', name: 'VASILIU FLORIN', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
-  { id: '10', name: 'INSURĂȚELU CRISTINA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '11', name: 'APOSTOL ELENA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '12', name: 'CRIȘU TUDORIȚA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '13', name: 'GRIGORE GABRIELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '14', name: 'IRIMIA MIHAELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '15', name: 'ELEFTERIU MIHAELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '16', name: 'CLIMINTE LUMINIȚA', role: 'AS', norm: 0.75, active: true, shiftPattern: 'normal' },
-  { id: '17', name: 'GRECU MIRELA', role: 'AS', norm: 1.0, active: true, shiftPattern: 'normal' },
-  { id: '18', name: 'DAMIAN ANA MARIA', role: 'AS', norm: 0.8, active: true, shiftPattern: 'normal' }
+  { id: '1', name: 'APOSTOL FLORENTINA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '2', name: 'ARSENIE TATIANA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '3', name: 'BOLOHAN CARMEN', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '4', name: 'BUTA VALENTINA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '5', name: 'IRINA DANIELA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '6', name: 'NISTOR LĂCRĂMIOARA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '7', name: 'TÂRPESCU DANA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '8', name: 'ȘERBAN MONICA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '9', name: 'VASILIU FLORIN', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '10', name: 'INSURĂȚELU CRISTINA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '11', name: 'APOSTOL ELENA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '12', name: 'CRIȘU TUDORIȚA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '13', name: 'GRIGORE GABRIELA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '14', name: 'IRIMIA MIHAELA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '15', name: 'ELEFTERIU MIHAELA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '16', name: 'CLIMINTE LUMINIȚA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '17', name: 'GRECU MIRELA', role: 'AS', active: true, shiftPattern: 'normal' },
+  { id: '18', name: 'DAMIAN ANA MARIA', role: 'AS', active: true, shiftPattern: 'normal' }
 ];
 
 function App() {
@@ -99,14 +99,27 @@ function App() {
     const saved = localStorage.getItem('spital_requirements');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.AS && parsed.AS.dayShifts !== undefined) {
+          // Migrate old schema to new schema
+          const migrated = {
+            AS: {
+              minDayShifts: parsed.AS.dayShifts,
+              maxDayShifts: parsed.AS.dayShifts,
+              minNightShifts: parsed.AS.nightShifts,
+              maxNightShifts: parsed.AS.nightShifts,
+            }
+          };
+          localStorage.setItem('spital_requirements', JSON.stringify(migrated));
+          return migrated;
+        }
+        return parsed;
       } catch (e) {
         console.error('Failed to parse requirements', e);
       }
     }
     const defaultReqs = {
-      MED: { dayShifts: 1, nightShifts: 1 },
-      AS: { dayShifts: 3, nightShifts: 3 },
+      AS: { minDayShifts: 2, maxDayShifts: 3, minNightShifts: 2, maxNightShifts: 3 },
     };
     localStorage.setItem('spital_requirements', JSON.stringify(defaultReqs));
     return defaultReqs;
@@ -237,8 +250,6 @@ function App() {
     saveShifts(updated);
   };
 
-
-
   // Run the TS automatic scheduler algorithm
   const handleAutoGenerate = () => {
     const result = autoGenerateSchedule(employees, year, month, shifts, reqs);
@@ -299,7 +310,7 @@ function App() {
     });
   };
 
-  // Update staff member fields (e.g. shiftPattern, norm, role)
+  // Update staff member fields (e.g. shiftPattern, role)
   const handleUpdateEmployee = (id: string, updatedFields: Partial<Employee>) => {
     const updated = employees.map((emp) => {
       if (emp.id === id) {
@@ -356,20 +367,21 @@ function App() {
             
             <div className="form-sections">
               <div>
-                <h4 className="settings-section-title">Medici (MED)</h4>
+                <h4 className="settings-section-title">Asistenți (AS) - Tura de Zi</h4>
                 <div className="input-row">
                   <div className="form-group">
-                    <label>Zi / Tura 8h</label>
+                    <label>Minim</label>
                     <input
                       type="number"
                       min={0}
-                      value={reqs.MED.dayShifts}
+                      value={reqs.AS.minDayShifts}
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         setReqs(prev => {
+                          const maxVal = Math.max(val, prev.AS.maxDayShifts);
                           const updated = {
                             ...prev,
-                            MED: { ...prev.MED, dayShifts: val }
+                            AS: { ...prev.AS, minDayShifts: val, maxDayShifts: maxVal }
                           };
                           updateRequirements(updated);
                           return updated;
@@ -378,17 +390,17 @@ function App() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Noapte (12h)</label>
+                    <label>Maxim</label>
                     <input
                       type="number"
-                      min={0}
-                      value={reqs.MED.nightShifts}
+                      min={reqs.AS.minDayShifts}
+                      value={reqs.AS.maxDayShifts}
                       onChange={(e) => {
-                        const val = Number(e.target.value);
+                        const val = Math.max(reqs.AS.minDayShifts, Number(e.target.value));
                         setReqs(prev => {
                           const updated = {
                             ...prev,
-                            MED: { ...prev.MED, nightShifts: val }
+                            AS: { ...prev.AS, maxDayShifts: val }
                           };
                           updateRequirements(updated);
                           return updated;
@@ -398,22 +410,23 @@ function App() {
                   </div>
                 </div>
               </div>
-
-              <div>
-                <h4 className="settings-section-title">Asistenți (AS)</h4>
+              
+              <div style={{ marginTop: '1.25rem' }}>
+                <h4 className="settings-section-title">Asistenți (AS) - Tura de Noapte</h4>
                 <div className="input-row">
                   <div className="form-group">
-                    <label>Zi / Tura 8h</label>
+                    <label>Minim</label>
                     <input
                       type="number"
                       min={0}
-                      value={reqs.AS.dayShifts}
+                      value={reqs.AS.minNightShifts}
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         setReqs(prev => {
+                          const maxVal = Math.max(val, prev.AS.maxNightShifts);
                           const updated = {
                             ...prev,
-                            AS: { ...prev.AS, dayShifts: val }
+                            AS: { ...prev.AS, minNightShifts: val, maxNightShifts: maxVal }
                           };
                           updateRequirements(updated);
                           return updated;
@@ -422,17 +435,17 @@ function App() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Noapte (12h)</label>
+                    <label>Maxim</label>
                     <input
                       type="number"
-                      min={0}
-                      value={reqs.AS.nightShifts}
+                      min={reqs.AS.minNightShifts}
+                      value={reqs.AS.maxNightShifts}
                       onChange={(e) => {
-                        const val = Number(e.target.value);
+                        const val = Math.max(reqs.AS.minNightShifts, Number(e.target.value));
                         setReqs(prev => {
                           const updated = {
                             ...prev,
-                            AS: { ...prev.AS, nightShifts: val }
+                            AS: { ...prev.AS, maxNightShifts: val }
                           };
                           updateRequirements(updated);
                           return updated;
