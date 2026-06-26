@@ -6,14 +6,9 @@ export interface Employee {
   shiftPattern?: 'normal' | '8h';
 }
 
-export type ShiftType = 'Z' | 'N' | '8' | '4' | 'CO' | 'CIC' | 'L' | '-';
+export type ShiftType = 'Z' | 'N' | '8' | '4' | 'CO' | 'CIC' | '-';
 
-export interface MonthSchedule {
-  year: number;
-  month: number; // 0-11 (Jan is 0, Dec is 11)
-  // employeeId -> day (1..31) -> ShiftType
-  shifts: { [employeeId: string]: { [day: number]: ShiftType } };
-}
+
 
 export interface DayInfo {
   day: number;
@@ -23,7 +18,7 @@ export interface DayInfo {
 }
 
 // Helper to get all Romanian legal holidays for a given year as YYYY-MM-DD strings
-export function getRomanianLegalHolidays(year: number): Set<string> {
+function getRomanianLegalHolidays(year: number): Set<string> {
   const holidays = new Set<string>();
   
   const addFixed = (m: number, d: number) => {
@@ -121,7 +116,7 @@ export function getWorkingDaysCount(year: number, month: number): number {
   return days.filter(d => !d.isWeekend && !d.isHoliday).length;
 }
 
-export interface EmployeeCalculations {
+interface EmployeeCalculations {
   totalWorked: number;
   nightHours: number;
   overtime50: number;
@@ -171,7 +166,6 @@ export function calculateEmployeeHours(
         // Concediu - doesn't count as worked hours in the "Total ore lucrate" column
         // but it is not "unworked" in a negative sense. However, let's track it
         break;
-      case 'L':
       case '-':
       default:
         break;

@@ -1,5 +1,5 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from 'react';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import type { Employee, ShiftType } from './utils/calculations';
 import { autoGenerateSchedule, validateSchedule } from './utils/scheduler';
 import type { ValidationWarning, SchedulerRequirements } from './utils/scheduler';
@@ -31,18 +31,7 @@ const INITIAL_ROSTER: Employee[] = [
 ];
 
 function App() {
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    const saved = localStorage.getItem('spital_employees');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse employees', e);
-      }
-    }
-    localStorage.setItem('spital_employees', JSON.stringify(INITIAL_ROSTER));
-    return INITIAL_ROSTER;
-  });
+  const [employees, setEmployees] = useLocalStorage<Employee[]>('spital_employees', INITIAL_ROSTER);
 
   const [year, setYear] = useState<number>(2026);
   const [month, setMonth] = useState<number>(5); // June is 5 (0-indexed)
@@ -53,120 +42,21 @@ function App() {
   const [vacationSubTab, setVacationSubTab] = useState<'anual' | 'lunar'>('anual');
 
   // Vacation Planning States
-  const [vacationPlanning, setVacationPlanning] = useState<VacationPlanningState>(() => {
-    const saved = localStorage.getItem('spital_vacations_2026');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse vacations', e);
-      }
-    }
-    return {};
+  const [vacationPlanning, setVacationPlanning] = useLocalStorage<VacationPlanningState>(`spital_vacations_${year}`, {});
+
+  const [vacationMetadata, setVacationMetadata] = useLocalStorage<VacationMetadata>(`spital_vacation_metadata_${year}`, {
+    registrationNumber: '',
+    registrationDate: '',
+    section: 'SECȚIE ATI',
   });
 
-  const [vacationMetadata, setVacationMetadata] = useState<VacationMetadata>(() => {
-    const saved = localStorage.getItem('spital_vacation_metadata_2026');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse vacation metadata', e);
-      }
-    }
-    return {
-      registrationNumber: '',
-      registrationDate: '',
-      section: 'SECȚIE ATI',
-    };
-  });
-
-
-  const [shifts, setShifts] = useState<{ [employeeId: string]: { [day: number]: ShiftType } }>(() => {
-    const saved = localStorage.getItem('spital_shifts_2026_5');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse shifts', e);
-      }
-    }
-    return {};
-  });
+  const [shifts, setShifts] = useLocalStorage<{ [employeeId: string]: { [day: number]: ShiftType } }>(`spital_shifts_${year}_${month}`, {});
 
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
 
-  const [reqs, setReqs] = useState<SchedulerRequirements>(() => {
-    const saved = localStorage.getItem('spital_requirements');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.AS && parsed.AS.dayShifts !== undefined) {
-          // Migrate old schema to new schema
-          const migrated = {
-            AS: {
-              minDayShifts: parsed.AS.dayShifts,
-              maxDayShifts: parsed.AS.dayShifts,
-              minNightShifts: parsed.AS.nightShifts,
-              maxNightShifts: parsed.AS.nightShifts,
-            }
-          };
-          localStorage.setItem('spital_requirements', JSON.stringify(migrated));
-          return migrated;
-        }
-        return parsed;
-      } catch (e) {
-        console.error('Failed to parse requirements', e);
-      }
-    }
-    const defaultReqs = {
-      AS: { minDayShifts: 2, maxDayShifts: 3, minNightShifts: 2, maxNightShifts: 3 },
-    };
-    localStorage.setItem('spital_requirements', JSON.stringify(defaultReqs));
-    return defaultReqs;
+  const [reqs, setReqs] = useLocalStorage<SchedulerRequirements>('spital_requirements', {
+    AS: { minDayShifts: 2, maxDayShifts: 3, minNightShifts: 2, maxNightShifts: 3 },
   });
-
-  // Sync state and localStorage when year/month changes
-  useEffect(() => {
-    const saved = localStorage.getItem(`spital_shifts_${year}_${month}`);
-    if (saved) {
-      try {
-        setShifts(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse shifts', e);
-        setShifts({});
-      }
-    } else {
-      setShifts({});
-    }
-  }, [year, month]);
-
-  // Sync vacation planning state when year changes
-  useEffect(() => {
-    const saved = localStorage.getItem(`spital_vacations_${year}`);
-    if (saved) {
-      try {
-        setVacationPlanning(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse vacations', e);
-        setVacationPlanning({});
-      }
-    } else {
-      setVacationPlanning({});
-    }
-
-    const savedMeta = localStorage.getItem(`spital_vacation_metadata_${year}`);
-    if (savedMeta) {
-      try {
-        setVacationMetadata(JSON.parse(savedMeta));
-      } catch (e) {
-        console.error('Failed to parse vacation metadata', e);
-        setVacationMetadata({ registrationNumber: '', registrationDate: '', section: 'SECȚIE ATI' });
-      }
-    } else {
-      setVacationMetadata({ registrationNumber: '', registrationDate: '', section: 'SECȚIE ATI' });
-    }
-  }, [year]);
 
   const handleUpdateVacation = (employeeId: string, fields: Partial<EmployeeVacationInfo>) => {
     setVacationPlanning((prev) => {
@@ -177,33 +67,26 @@ function App() {
         vacationDaysAllowed: '',
         monthlyPlanned: {}
       };
-      const updated = {
+      return {
         ...prev,
         [employeeId]: {
           ...existing,
           ...fields,
         }
       };
-      localStorage.setItem(`spital_vacations_${year}`, JSON.stringify(updated));
-      return updated;
     });
   };
 
   const handleUpdateMetadata = (fields: Partial<VacationMetadata>) => {
-    setVacationMetadata((prev) => {
-      const updated = {
-        ...prev,
-        ...fields
-      };
-      localStorage.setItem(`spital_vacation_metadata_${year}`, JSON.stringify(updated));
-      return updated;
-    });
+    setVacationMetadata((prev) => ({
+      ...prev,
+      ...fields
+    }));
   };
 
   const handleClearVacations = () => {
     if (window.confirm("Sigur doriți să ștergeți toate programările de concediu pentru acest an?")) {
       setVacationPlanning({});
-      localStorage.setItem(`spital_vacations_${year}`, JSON.stringify({}));
     }
   };
 
@@ -213,28 +96,20 @@ function App() {
     setWarnings(warns);
   }, [shifts, employees, year, month]);
 
-  // Save shifts to local storage
-  const saveShifts = (updatedShifts: typeof shifts) => {
-    localStorage.setItem(`spital_shifts_${year}_${month}`, JSON.stringify(updatedShifts));
-  };
-
-  // Save coverage targets to local storage
+  // Save coverage targets
   const updateRequirements = (newReqs: SchedulerRequirements) => {
-    localStorage.setItem('spital_requirements', JSON.stringify(newReqs));
     setReqs(newReqs);
   };
 
   // Handle manual shift updates
   const handleShiftChange = (employeeId: string, day: number, newShift: ShiftType) => {
-    const updated = {
+    setShifts({
       ...shifts,
       [employeeId]: {
         ...(shifts[employeeId] || {}),
         [day]: newShift,
       },
-    };
-    setShifts(updated);
-    saveShifts(updated);
+    });
   };
 
   // Handle batch shift updates (e.g. applying vacation to a range of days)
@@ -243,17 +118,14 @@ function App() {
     for (const entry of days) {
       empShifts[entry.day] = entry.shift;
     }
-    const updated = {
+    setShifts({
       ...shifts,
       [employeeId]: empShifts,
-    };
-    setShifts(updated);
-    saveShifts(updated);
+    });
   };
 
   const handleImportShifts = (importedShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => {
     setShifts(importedShifts);
-    saveShifts(importedShifts);
   };
 
   const handleImportVacations = (importedVacationShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => {
@@ -281,7 +153,6 @@ function App() {
         updated[empId] = currentEmpShifts;
       });
 
-      saveShifts(updated);
       return updated;
     });
   };
@@ -290,7 +161,6 @@ function App() {
   const handleAutoGenerate = () => {
     const result = autoGenerateSchedule(employees, year, month, shifts, reqs);
     setShifts(result);
-    saveShifts(result);
   };
 
   // Clear shifts but preserve vacation days (CO/CIC)
@@ -307,7 +177,6 @@ function App() {
       cleared[emp.id] = preserved;
     });
     setShifts(cleared);
-    saveShifts(cleared);
   };
 
   // Clear absolutely everything including vacation days
@@ -317,7 +186,6 @@ function App() {
       cleared[emp.id] = {};
     });
     setShifts(cleared);
-    saveShifts(cleared);
   };
 
   // Add a new staff member
@@ -327,35 +195,28 @@ function App() {
       id: Date.now().toString(),
       active: true,
     };
-    const updated = [...employees, added];
-    setEmployees(updated);
-    localStorage.setItem('spital_employees', JSON.stringify(updated));
+    setEmployees([...employees, added]);
   };
 
   // Remove staff member
   const handleRemoveEmployee = (id: string) => {
-    const updated = employees.filter((e) => e.id !== id);
-    setEmployees(updated);
-    localStorage.setItem('spital_employees', JSON.stringify(updated));
+    setEmployees(employees.filter((e) => e.id !== id));
 
     setShifts((prev) => {
       const copy = { ...prev };
       delete copy[id];
-      saveShifts(copy);
       return copy;
     });
   };
 
   // Update staff member fields (e.g. shiftPattern, role)
   const handleUpdateEmployee = (id: string, updatedFields: Partial<Employee>) => {
-    const updated = employees.map((emp) => {
+    setEmployees(employees.map((emp) => {
       if (emp.id === id) {
         return { ...emp, ...updatedFields };
       }
       return emp;
-    });
-    setEmployees(updated);
-    localStorage.setItem('spital_employees', JSON.stringify(updated));
+    }));
   };
 
   return (

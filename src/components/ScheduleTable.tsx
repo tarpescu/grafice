@@ -1,8 +1,11 @@
-import React from 'react';
+
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth, calculateEmployeeHours } from '../utils/calculations';
 import { Printer, AlertTriangle, FileDown, Menu, ChevronLeft, Trash2, Upload, Download } from 'lucide-react';
 import type { ValidationWarning } from '../utils/scheduler';
+import { ROMANIAN_MONTHS, MONTH_NAMES } from '../utils/constants';
+import { downloadAsJson, importFromJsonFile } from '../utils/fileHelpers';
+import { PrintSignatures } from './PrintSignatures';
 
 interface ScheduleTableProps {
   employees: Employee[];
@@ -19,7 +22,7 @@ interface ScheduleTableProps {
   onImportShifts: (shifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
 
-export const ScheduleTable: React.FC<ScheduleTableProps> = ({
+export const ScheduleTable = ({
   employees,
   shifts,
   year,
@@ -32,23 +35,15 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   isSidebarOpen,
   onToggleSidebar,
   onImportShifts,
-}) => {
+}: ScheduleTableProps) => {
   const daysInfo = getDaysInMonth(year, month);
-  const monthNames = [
-    'IANUARIE', 'FEBRUARIE', 'MARTIE', 'APRILIE', 'MAI', 'IUNIE',
-    'IULIE', 'AUGUST', 'SEPTEMBRIE', 'OCTOMBRIE', 'NOIEMBRIE', 'DECEMBRIE'
-  ];
 
   const handlePrint = () => {
     window.print();
   };
   const handleExportPDF = () => {
     const originalTitle = document.title;
-    const romanianMonths = [
-      'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
-      'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
-    ];
-    const formattedMonth = romanianMonths[month];
+    const formattedMonth = ROMANIAN_MONTHS[month];
     document.title = `grafic-${formattedMonth}-${year}`;
     window.print();
     document.title = originalTitle;
@@ -61,70 +56,54 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
       month,
       shifts
     };
-    const romanianMonths = [
-      'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
-      'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
-    ];
-    const fileName = `grafic-${romanianMonths[month]}-${year}.json`;
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(dataToExport, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', fileName);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    const fileName = `grafic-${ROMANIAN_MONTHS[month]}-${year}.json`;
+    downloadAsJson(dataToExport, fileName);
   };
 
   const handleImportShiftsClick = () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json';
-    fileInput.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const data = JSON.parse(event.target?.result as string);
-          
-           let importedShifts = data.shifts;
-          const importedYear = data.year;
-          const importedMonth = data.month;
-          
-          if (!importedShifts && !data.type) {
-            importedShifts = data;
-          }
-          
-          if (!importedShifts || typeof importedShifts !== 'object') {
-            alert('Datele din fișier sunt invalide!');
-            return;
-          }
-          
-          const romanianMonths = [
-            'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
-            'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
-          ];
-          
-          if (importedYear !== undefined && importedMonth !== undefined) {
-            if (importedYear !== year || importedMonth !== month) {
-              const confirmImport = window.confirm(
-                `Avertisment: Fișierul selectat conține date pentru ${romanianMonths[importedMonth]} ${importedYear}, iar luna activă este ${romanianMonths[month]} ${year}.\n\nSigur doriți să importați aceste date?`
-              );
-              if (!confirmImport) return;
-            }
-          }
-          
-          onImportShifts(importedShifts);
-          alert('Graficul de ture a fost importat cu succes!');
-        } catch {
-          alert('Fișierul selectat nu este un JSON valid sau este corupt!');
-        }
-      };
-      reader.readAsText(file);
-    };
-    fileInput.click();
+    importFromJsonFile({
+      expectedYear: year,
+      expectedMonth: month,
+      dataKey: 'shifts',
+      onImport: (importedData) => {
+        onImportShifts(importedData as { [employeeId: string]: { [day: number]: ShiftType } });
+      },
+      successMessage: 'Graficul de ture a fost importat cu succes!',
+      mismatchLabel: 'date'
+    });
+  };
+
+  const renderDayHeader = (d: typeof daysInfo[0]) => (
+    <th key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`} style={{ fontSize: '8px', padding: '2px' }} title={d.isHoliday ? 'Sărbătoare Legală' : ''}>
+      {d.day}
+    </th>
+  );
+
+  const renderDayCell = (d: typeof daysInfo[0], emp: Employee, empShifts: { [day: number]: ShiftType }) => {
+    const shift = empShifts[d.day] || '-';
+    const hasWarning = warnings.some(w => w.employeeId === emp.id && w.day === d.day);
+    return (
+      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
+        <span className="print-only-value">{shift === '-' ? '' : shift}</span>
+        <select
+          value={shift}
+          onChange={(e) => onShiftChange(emp.id, d.day, e.target.value as ShiftType)}
+          className="no-print-select"
+        >
+          <option value="-">-</option>
+          {(shift !== 'CO' && shift !== 'CIC') && (
+            <>
+              {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
+              {emp.shiftPattern !== '8h' && <option value="N">N</option>}
+              <option value="8">8</option>
+              <option value="4">4</option>
+            </>
+          )}
+          <option value="CO">CO</option>
+          <option value="CIC">CIC</option>
+        </select>
+      </td>
+    );
   };
 
   return (
@@ -203,7 +182,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             </div>
             <div className="print-header-right">
               <h2>FOAIE COLECTIVĂ DE PREZENȚĂ</h2>
-              <h3>LUNA: {monthNames[month]} {year}</h3>
+              <h3>LUNA: {MONTH_NAMES[month].toUpperCase()} {year}</h3>
             </div>
           </div>
           <p className="print-only-header-p">
@@ -239,17 +218,9 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             </tr>
             <tr>
               {/* Days 1-15 */}
-              {daysInfo.slice(0, 15).map((d) => (
-                <th key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`} style={{ fontSize: '8px', padding: '2px' }} title={d.isHoliday ? 'Sărbătoare Legală' : ''}>
-                  {d.day}
-                </th>
-              ))}
+              {daysInfo.slice(0, 15).map(renderDayHeader)}
               {/* Days 16-31 */}
-              {daysInfo.slice(15).map((d) => (
-                <th key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`} style={{ fontSize: '8px', padding: '2px' }} title={d.isHoliday ? 'Sărbătoare Legală' : ''}>
-                  {d.day}
-                </th>
-              ))}
+              {daysInfo.slice(15).map(renderDayHeader)}
               {/* Columns for 'Din care' */}
               <th style={{ fontSize: '7px', padding: '2px 1px', lineHeight: '1.1', fontWeight: 600 }}>Ore<br/>suplim.<br/>50%</th>
               <th style={{ fontSize: '7px', padding: '2px 1px', lineHeight: '1.1', fontWeight: 600 }}>Ore<br/>suplim.<br/>100%</th>
@@ -277,63 +248,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                   <td>{emp.role}</td>
                   
                   {/* Days 1-15 */}
-                  {daysInfo.slice(0, 15).map((d) => {
-                    const shift = empShifts[d.day] || '-';
-                    const hasWarning = warnings.some(w => w.employeeId === emp.id && w.day === d.day);
-                    return (
-                      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
-                        <span className="print-only-value">{shift === '-' ? '' : shift}</span>
-                        <select
-                          value={shift}
-                          onChange={(e) => onShiftChange(emp.id, d.day, e.target.value as ShiftType)}
-                          className="no-print-select"
-                        >
-                          <option value="-">-</option>
-                          {(shift !== 'CO' && shift !== 'CIC') && (
-                            <>
-                              {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
-                              {emp.shiftPattern !== '8h' && <option value="N">N</option>}
-                              <option value="8">8</option>
-                              <option value="4">4</option>
-                            </>
-                          )}
-                          <option value="CO">CO</option>
-                          <option value="CIC">CIC</option>
-                        </select>
-                      </td>
-                    );
-                  })}
+                  {daysInfo.slice(0, 15).map((d) => renderDayCell(d, emp, empShifts))}
 
                   {/* Subtotal 1-15 */}
                   <td style={{ fontWeight: 600 }}>{subtotal1_15}</td>
 
                   {/* Days 16-31 */}
-                  {daysInfo.slice(15).map((d) => {
-                    const shift = empShifts[d.day] || '-';
-                    const hasWarning = warnings.some(w => w.employeeId === emp.id && w.day === d.day);
-                    return (
-                      <td key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''} shift-cell shift-${shift} ${hasWarning ? 'shift-err' : ''} cell-nopadding`}>
-                        <span className="print-only-value">{shift === '-' ? '' : shift}</span>
-                        <select
-                          value={shift}
-                          onChange={(e) => onShiftChange(emp.id, d.day, e.target.value as ShiftType)}
-                          className="no-print-select"
-                        >
-                          <option value="-">-</option>
-                          {(shift !== 'CO' && shift !== 'CIC') && (
-                            <>
-                              {emp.shiftPattern !== '8h' && <option value="Z">Z</option>}
-                              {emp.shiftPattern !== '8h' && <option value="N">N</option>}
-                              <option value="8">8</option>
-                              <option value="4">4</option>
-                            </>
-                          )}
-                          <option value="CO">CO</option>
-                          <option value="CIC">CIC</option>
-                        </select>
-                      </td>
-                    );
-                  })}
+                  {daysInfo.slice(15).map((d) => renderDayCell(d, emp, empShifts))}
 
                   {/* Monthly Calculations columns */}
                   <td style={{ fontWeight: 700 }}>{calcs.totalWorked}</td>
@@ -355,21 +276,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           </tbody>
         </table>
 
-        {/* Print Signatures Area */}
-        <div className="print-signatures">
-          <div className="signature-box">
-            <h4>MANAGER</h4>
-            <p>SUR CÎMPEANU ION</p>
-          </div>
-          <div className="signature-box">
-            <h4>ȘEF SECȚIE</h4>
-            <p>DR UNGUREANU SERGIU</p>
-          </div>
-          <div className="signature-box">
-            <h4>DIRECTOR ÎNGRIJIRI</h4>
-            <p>AS LUCHIAN NICOLETA</p>
-          </div>
-        </div>
+        <PrintSignatures />
       </div>
     </div>
   );

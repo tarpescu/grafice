@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Employee } from '../utils/calculations';
 import { UserPlus, Trash2, Users } from 'lucide-react';
 
@@ -9,12 +9,12 @@ interface StaffManagerProps {
   onUpdateEmployee: (id: string, updatedFields: Partial<Employee>) => void;
 }
 
-export const StaffManager: React.FC<StaffManagerProps> = ({
+export const StaffManager = ({
   employees,
   onAddEmployee,
   onRemoveEmployee,
   onUpdateEmployee,
-}) => {
+}: StaffManagerProps) => {
   const [name, setName] = useState('');
   const [shiftPattern, setShiftPattern] = useState<'normal' | '8h'>('normal');
 

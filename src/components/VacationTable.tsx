@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth } from '../utils/calculations';
 import { Printer, FileDown, Trash2, CalendarRange, Table2, Upload, Download } from 'lucide-react';
+import { ROMANIAN_MONTHS, MONTH_NAMES, MONTH_SHORT_NAMES } from '../utils/constants';
+import { downloadAsJson, importFromJsonFile } from '../utils/fileHelpers';
+import { PrintSignatures } from './PrintSignatures';
 
 export interface EmployeeVacationInfo {
   jobTitle: string;
@@ -38,7 +41,7 @@ interface VacationTableProps {
   onImportVacations: (vacationShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
 
-export const VacationTable: React.FC<VacationTableProps> = ({
+export const VacationTable = ({
   employees,
   vacationPlanning,
   metadata,
@@ -53,17 +56,8 @@ export const VacationTable: React.FC<VacationTableProps> = ({
   subTab,
   setSubTab,
   onImportVacations,
-}) => {
-
-  const monthNames = [
-    'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-    'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
-  ];
-
-  const monthShortNames = [
-    'ian', 'febr', 'martie', 'aprilie', 'mai', 'iunie',
-    'iulie', 'august', 'sept', 'oct', 'nov', 'dec'
-  ];
+}: VacationTableProps) => {
+  const daysInfo = getDaysInMonth(year, activeMonth);
 
   const handlePrint = () => {
     window.print();
@@ -72,7 +66,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
     const originalTitle = document.title;
     document.title = subTab === 'anual' 
       ? `grafic-concedii-anual-${year}` 
-      : `grafic-concedii-${monthNames[activeMonth].toLowerCase()}-${year}`;
+      : `grafic-concedii-${MONTH_NAMES[activeMonth].toLowerCase()}-${year}`;
     window.print();
     document.title = originalTitle;
   };
@@ -100,70 +94,21 @@ export const VacationTable: React.FC<VacationTableProps> = ({
       month: activeMonth,
       shifts: vacationShifts
     };
-    const romanianMonths = [
-      'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
-      'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
-    ];
-    const fileName = `grafic-concedii-${romanianMonths[activeMonth]}-${year}.json`;
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(dataToExport, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', fileName);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    const fileName = `grafic-concedii-${ROMANIAN_MONTHS[activeMonth]}-${year}.json`;
+    downloadAsJson(dataToExport, fileName);
   };
 
   const handleImportVacationsClick = () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json';
-    fileInput.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const data = JSON.parse(event.target?.result as string);
-          
-          let importedShifts = data.shifts;
-          const importedYear = data.year;
-          const importedMonth = data.month;
-          
-          if (!importedShifts && !data.type) {
-            importedShifts = data;
-          }
-          
-          if (!importedShifts || typeof importedShifts !== 'object') {
-            alert('Datele din fișier sunt invalide!');
-            return;
-          }
-          
-          const romanianMonths = [
-            'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
-            'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
-          ];
-          
-          if (importedYear !== undefined && importedMonth !== undefined) {
-            if (importedYear !== year || importedMonth !== activeMonth) {
-              const confirmImport = window.confirm(
-                `Avertisment: Fișierul selectat conține concedii pentru ${romanianMonths[importedMonth]} ${importedYear}, iar luna activă selectată este ${romanianMonths[activeMonth]} ${year}.\n\nSigur doriți să importați aceste concedii?`
-              );
-              if (!confirmImport) return;
-            }
-          }
-          
-          onImportVacations(importedShifts);
-          alert('Planificarea de concedii a fost importată cu succes!');
-        } catch {
-          alert('Fișierul selectat nu este un JSON valid sau este corupt!');
-        }
-      };
-      reader.readAsText(file);
-    };
-    fileInput.click();
+    importFromJsonFile({
+      expectedYear: year,
+      expectedMonth: activeMonth,
+      dataKey: 'shifts',
+      onImport: (importedShifts) => {
+        onImportVacations(importedShifts as { [employeeId: string]: { [day: number]: ShiftType } });
+      },
+      successMessage: 'Planificarea de concedii a fost importată cu succes!',
+      mismatchLabel: 'concedii'
+    });
   };
 
   // Helper to load all shifts from memory & localStorage to calculate scheduled CO days
@@ -208,7 +153,6 @@ export const VacationTable: React.FC<VacationTableProps> = ({
   };
 
   // Monthly Grid Configurations
-  const daysInfo = getDaysInMonth(year, activeMonth);
 
   const [vacationEmpId, setVacationEmpId] = useState<string>('');
   const [vacationType, setVacationType] = useState<'CO' | 'CIC'>('CO');
@@ -237,7 +181,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
     }
     onBatchShiftChange(vacationEmpId, batchDays);
     const empName = employees.find(e => e.id === vacationEmpId)?.name || '';
-    alert(`S-a aplicat concediul de tip ${vacationType} pentru ${empName} în perioada ${startDay}-${endDay} ${monthNames[activeMonth]}.`);
+    alert(`S-a aplicat concediul de tip ${vacationType} pentru ${empName} în perioada ${startDay}-${endDay} ${MONTH_NAMES[activeMonth]}.`);
     setVacationEmpId('');
   };
 
@@ -364,7 +308,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
                 <tr>
                   <th style={{ width: '55px' }}>totală</th>
                   <th style={{ width: '55px' }}>în unit.</th>
-                  {monthShortNames.map((m, idx) => (
+                  {MONTH_SHORT_NAMES.map((m, idx) => (
                     <th key={idx} style={{ width: '40px', fontSize: '9px' }}>{m}</th>
                   ))}
                 </tr>
@@ -418,7 +362,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
                           type="text"
                           value={info.vacationDaysAllowed}
                           onChange={(e) => onUpdateVacation(emp.id, { vacationDaysAllowed: e.target.value })}
-                          className="table-cell-input text-center font-semibold"
+                          className="table-cell-input text-center"
                           placeholder="Ex: 30+3+5"
                         />
                       </td>
@@ -492,20 +436,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
             </div>
 
             {/* Printable/Display Signatures */}
-            <div className="print-signatures vacation-signatures">
-              <div className="signature-box">
-                <h4>MANAGER</h4>
-                <p>SUR CÎMPEANU ION</p>
-              </div>
-              <div className="signature-box">
-                <h4>ȘEF SECȚIE</h4>
-                <p>DR UNGUREANU SERGIU</p>
-              </div>
-              <div className="signature-box">
-                <h4>DIRECTOR ÎNGRIJIRI</h4>
-                <p>AS LUCHIAN NICOLETA</p>
-              </div>
-            </div>
+            <PrintSignatures className="vacation-signatures" />
           </>
         )}
 
@@ -523,7 +454,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
                 </div>
                 <div className="print-header-right">
                   <h2>PLANIFICARE CONCEDII DE ODIHNĂ</h2>
-                  <h3>LUNA: {monthNames[activeMonth].toUpperCase()} {year}</h3>
+                  <h3>LUNA: {MONTH_NAMES[activeMonth].toUpperCase()} {year}</h3>
                 </div>
               </div>
               <p className="print-only-header-p">
@@ -683,20 +614,7 @@ export const VacationTable: React.FC<VacationTableProps> = ({
             </table>
 
             {/* Printable Signatures */}
-            <div className="print-signatures">
-              <div className="signature-box">
-                <h4>MANAGER</h4>
-                <p>SUR CÎMPEANU ION</p>
-              </div>
-              <div className="signature-box">
-                <h4>ȘEF SECȚIE</h4>
-                <p>DR UNGUREANU SERGIU</p>
-              </div>
-              <div className="signature-box">
-                <h4>DIRECTOR ÎNGRIJIRI</h4>
-                <p>AS LUCHIAN NICOLETA</p>
-              </div>
-            </div>
+            <PrintSignatures />
           </>
         )}
 
