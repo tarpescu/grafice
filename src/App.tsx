@@ -46,10 +46,11 @@ function App() {
 
   const [year, setYear] = useState<number>(2026);
   const [month, setMonth] = useState<number>(5); // June is 5 (0-indexed)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth > 1024);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Tab Navigation State
   const [activeTab, setActiveTab] = useState<'pontaj' | 'concedii'>('pontaj');
+  const [vacationSubTab, setVacationSubTab] = useState<'anual' | 'lunar'>('anual');
 
   // Vacation Planning States
   const [vacationPlanning, setVacationPlanning] = useState<VacationPlanningState>(() => {
@@ -539,7 +540,8 @@ function App() {
               onShiftChange={handleShiftChange}
               onBatchShiftChange={handleBatchShiftChange}
               activeMonth={month}
-              setActiveMonth={setMonth}
+              subTab={vacationSubTab}
+              setSubTab={setVacationSubTab}
               onImportVacations={handleImportVacations}
             />
           )}
@@ -547,7 +549,7 @@ function App() {
           {/* Month & Year Selectors Aligned Bottom Right */}
           <div className="no-print month-selector-card">
             <Calendar size={16} className="calendar-icon-secondary" />
-            {activeTab === 'pontaj' ? (
+            {(activeTab === 'pontaj' || (activeTab === 'concedii' && vacationSubTab === 'lunar')) ? (
               <>
                 <span>Selectează Luna:</span>
                 <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
@@ -555,6 +557,7 @@ function App() {
                     <option key={idx} value={idx}>{name}</option>
                   ))}
                 </select>
+                <span>Selectează Anul:</span>
               </>
             ) : (
               <span>Selectează Anul:</span>

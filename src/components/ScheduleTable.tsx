@@ -42,11 +42,14 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   const handlePrint = () => {
     window.print();
   };
-
   const handleExportPDF = () => {
     const originalTitle = document.title;
-    const formattedMonth = monthNames[month].toLowerCase();
-    document.title = `${formattedMonth}-${year}`;
+    const romanianMonths = [
+      'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+      'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
+    ];
+    const formattedMonth = romanianMonths[month];
+    document.title = `grafic-${formattedMonth}-${year}`;
     window.print();
     document.title = originalTitle;
   };
@@ -207,8 +210,21 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             GRAFIC DE LUCRU ASISTENȚI
           </p>
         </div>
-
         <table className="schedule-table">
+          <colgroup>
+            <col style={{ width: '25px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '35px' }} />
+            {daysInfo.map((d) => (
+              <col key={d.day} style={{ width: '18px' }} />
+            ))}
+            <col style={{ width: '30px' }} />
+            <col style={{ width: '35px' }} />
+            <col style={{ width: '28px' }} />
+            <col style={{ width: '28px' }} />
+            <col style={{ width: '28px' }} />
+            <col style={{ width: '35px' }} />
+          </colgroup>
           <thead>
             <tr>
               <th rowSpan={2} style={{ width: '40px' }}>Nr. Crt</th>
@@ -235,9 +251,9 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                 </th>
               ))}
               {/* Columns for 'Din care' */}
-              <th style={{ fontSize: '7px', writingMode: 'vertical-rl', transform: 'rotate(180deg)', padding: '4px 2px' }}>Ore suplim. 50%</th>
-              <th style={{ fontSize: '7px', writingMode: 'vertical-rl', transform: 'rotate(180deg)', padding: '4px 2px' }}>Ore suplim. 100%</th>
-              <th style={{ fontSize: '7px', writingMode: 'vertical-rl', transform: 'rotate(180deg)', padding: '4px 2px' }}>Ore de noapte</th>
+              <th style={{ fontSize: '7px', padding: '2px 1px', lineHeight: '1.1', fontWeight: 600 }}>Ore<br/>suplim.<br/>50%</th>
+              <th style={{ fontSize: '7px', padding: '2px 1px', lineHeight: '1.1', fontWeight: 600 }}>Ore<br/>suplim.<br/>100%</th>
+              <th style={{ fontSize: '7px', padding: '2px 1px', lineHeight: '1.1', fontWeight: 600 }}>Ore<br/>de<br/>noapte</th>
             </tr>
           </thead>
           <tbody>

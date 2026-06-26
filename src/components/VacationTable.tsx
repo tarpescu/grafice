@@ -33,7 +33,8 @@ interface VacationTableProps {
   onShiftChange: (employeeId: string, day: number, shift: ShiftType) => void;
   onBatchShiftChange: (employeeId: string, days: { day: number; shift: ShiftType }[]) => void;
   activeMonth: number;
-  setActiveMonth: (month: number) => void;
+  subTab: 'anual' | 'lunar';
+  setSubTab: (subTab: 'anual' | 'lunar') => void;
   onImportVacations: (vacationShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
 
@@ -49,10 +50,10 @@ export const VacationTable: React.FC<VacationTableProps> = ({
   onShiftChange,
   onBatchShiftChange,
   activeMonth,
-  setActiveMonth,
+  subTab,
+  setSubTab,
   onImportVacations,
 }) => {
-  const [subTab, setSubTab] = useState<'anual' | 'lunar'>('anual');
 
   const monthNames = [
     'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
@@ -67,10 +68,11 @@ export const VacationTable: React.FC<VacationTableProps> = ({
   const handlePrint = () => {
     window.print();
   };
-
   const handleExportPDF = () => {
     const originalTitle = document.title;
-    document.title = subTab === 'anual' ? `programare-concedii-anual-${year}` : `grafic-concedii-${monthNames[activeMonth].toLowerCase()}-${year}`;
+    document.title = subTab === 'anual' 
+      ? `grafic-concedii-anual-${year}` 
+      : `grafic-concedii-${monthNames[activeMonth].toLowerCase()}-${year}`;
     window.print();
     document.title = originalTitle;
   };
@@ -277,18 +279,6 @@ export const VacationTable: React.FC<VacationTableProps> = ({
         <div className="toolbar-group-small">
           {subTab === 'lunar' && (
             <>
-              <div className="month-selector-sub-toolbar">
-                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>Luna:</span>
-                <select 
-                  value={activeMonth} 
-                  onChange={(e) => setActiveMonth(Number(e.target.value))}
-                  style={{ padding: '0.35rem 0.5rem', fontSize: '0.85rem', width: '130px' }}
-                >
-                  {monthNames.map((name, idx) => (
-                    <option key={idx} value={idx}>{name}</option>
-                  ))}
-                </select>
-              </div>
               <button onClick={handleImportVacationsClick} className="btn btn-secondary" title="Importă planificare concedii din fișier JSON">
                 <Upload size={16} />
                 Importă Concedii
@@ -611,8 +601,16 @@ export const VacationTable: React.FC<VacationTableProps> = ({
                 </button>
               </div>
             </div>
-
             <table className="schedule-table vacation-calendar-grid">
+              <colgroup>
+                <col style={{ width: '25px' }} />
+                <col style={{ width: '130px' }} />
+                <col style={{ width: '35px' }} />
+                {daysInfo.map((d) => (
+                  <col key={d.day} style={{ width: '18px' }} />
+                ))}
+                <col style={{ width: '50px' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}>Nr. Crt</th>
