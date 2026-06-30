@@ -466,9 +466,7 @@ select:focus {
   }
 
   /* Printable Sheet Header */
-  .print-only-
-
-  .print-only-header table {
+  .print-only- .print-only-header table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 0.5rem;
@@ -504,28 +502,38 @@ select:focus {
     background-color: transparent !important;
     color: black !important;
   }
-
-  /* Signature Block at the bottom */
-  .print-signatures {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr);
-    margin-top: 2rem;
-    text-align: center;
-    page-break-inside: avoid;
-  }
-
-  .signature-box {
-    border-top: 1px dashed #000;
-    padding-top: 0.5rem;
-    margin: 0 1rem;
-  }
 }
 
-/* Desktop styles to hide print elements by default */
-.print-only-
-
+/* Signature Block styles (visible both on screen and in print) */
 .print-signatures {
-  display: none;
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 4rem;
+  text-align: center;
+}
+
+.signature-box {
+  border-top: 1px dashed #000;
+  padding-top: 0.75rem;
+  margin: 0 1.5rem;
+}
+
+.signature-box h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0 0 2rem 0;
+}
+
+.signature-box p {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+@media print {
+  .print-signatures {
+    page-break-inside: avoid;
+  }
 }
 
 .print-only-value {
@@ -673,11 +681,13 @@ select:focus {
 /* Signatures details */
 .signature-box h4 {
   font-size: 9px;
+  display: flexbox;
   font-weight: 700;
 }
 
 .signature-box p {
   font-size: 8px;
+  display: flexbox;
   margin-top: 1.5rem;
   font-weight: 600;
 }
@@ -855,9 +865,7 @@ select:focus {
 }
 
 /* Vacation Table Header Layout */
-.vacation-
-
-.vacation-header-top {
+.vacation- .vacation-header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1039,9 +1047,7 @@ select:focus {
     padding: 0 !important;
   }
 
-  .vacation-
-
-  .vacation-header-top {
+  .vacation- .vacation-header-top {
     border-bottom: 2px solid #000 !important;
     padding-bottom: 0.35rem !important;
   }
@@ -1171,6 +1177,7 @@ select:focus {
   align-self: flex-end;
   flex: 1 1 150px;
 }
+
 /* Missing Classes Added */
 .staff-select-inline {
   padding: 0.2rem 0.5rem;
