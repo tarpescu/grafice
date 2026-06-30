@@ -36,7 +36,7 @@ function App() {
   const [year, setYear] = useState<number>(2026);
   const [month, setMonth] = useState<number>(5); // June is 5 (0-indexed)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   // Tab Navigation State
   const [activeTab, setActiveTab] = useState<'pontaj' | 'concedii'>('pontaj');
   const [vacationSubTab, setVacationSubTab] = useState<'anual' | 'lunar'>('anual');
@@ -228,20 +228,20 @@ function App() {
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-      
+
       {/* Main Dashboard Layout */}
       <div className={`dashboard-grid ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         {/* Left Side Controls (Staff & Requirements) */}
         <div className="sidebar-container no-print">
           {/* Modal close button */}
-          <button 
+          <button
             className="modal-close-btn no-print"
             onClick={() => setIsSidebarOpen(false)}
             title="Închide"
           >
             <X size={20} />
           </button>
-          
+
           <div className="left-column">
             <StaffManager
               employees={employees}
@@ -251,106 +251,6 @@ function App() {
             />
 
 
-          </div>
-
-          {/* Coverage Configuration panel */}
-          <div className="card no-print">
-            <div className="card-title">
-              <span>Necesar Zilnic Ture</span>
-              <Settings size={18} />
-            </div>
-            
-            <div className="form-sections">
-              <div>
-                <h4 className="settings-section-title">Asistenți (AS) - Tura de Zi</h4>
-                <div className="input-row">
-                  <div className="form-group">
-                    <label>Minim</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={reqs.AS.minDayShifts}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setReqs(prev => {
-                          const maxVal = Math.max(val, prev.AS.maxDayShifts);
-                          const updated = {
-                            ...prev,
-                            AS: { ...prev.AS, minDayShifts: val, maxDayShifts: maxVal }
-                          };
-                          updateRequirements(updated);
-                          return updated;
-                        });
-                      }}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Maxim</label>
-                    <input
-                      type="number"
-                      min={reqs.AS.minDayShifts}
-                      value={reqs.AS.maxDayShifts}
-                      onChange={(e) => {
-                        const val = Math.max(reqs.AS.minDayShifts, Number(e.target.value));
-                        setReqs(prev => {
-                          const updated = {
-                            ...prev,
-                            AS: { ...prev.AS, maxDayShifts: val }
-                          };
-                          updateRequirements(updated);
-                          return updated;
-                        });
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div style={{ marginTop: '1.25rem' }}>
-                <h4 className="settings-section-title">Asistenți (AS) - Tura de Noapte</h4>
-                <div className="input-row">
-                  <div className="form-group">
-                    <label>Minim</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={reqs.AS.minNightShifts}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setReqs(prev => {
-                          const maxVal = Math.max(val, prev.AS.maxNightShifts);
-                          const updated = {
-                            ...prev,
-                            AS: { ...prev.AS, minNightShifts: val, maxNightShifts: maxVal }
-                          };
-                          updateRequirements(updated);
-                          return updated;
-                        });
-                      }}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Maxim</label>
-                    <input
-                      type="number"
-                      min={reqs.AS.minNightShifts}
-                      value={reqs.AS.maxNightShifts}
-                      onChange={(e) => {
-                        const val = Math.max(reqs.AS.minNightShifts, Number(e.target.value));
-                        setReqs(prev => {
-                          const updated = {
-                            ...prev,
-                            AS: { ...prev.AS, maxNightShifts: val }
-                          };
-                          updateRequirements(updated);
-                          return updated;
-                        });
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -406,7 +306,7 @@ function App() {
               onImportVacations={handleImportVacations}
             />
           )}
-          
+
           {/* Month & Year Selectors Aligned Bottom Right */}
           <div className="no-print month-selector-card">
             <Calendar size={16} className="calendar-icon-secondary" />
@@ -429,6 +329,107 @@ function App() {
               ))}
             </select>
           </div>
+
+          {/* Coverage Configuration panel */}
+          <div className="card no-print" style={{ marginTop: '1.5rem' }}>
+            <div className="card-title">
+              <span>Asistenti per tura</span>
+              <Settings size={18} />
+            </div>
+
+            <div className="form-sections">
+              <div>
+                <h4 className="settings-section-title">Asistenți - Tura de Zi</h4>
+                <div className="input-row">
+                  <div className="form-group">
+                    <label>Minim</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={reqs.AS.minDayShifts}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setReqs(prev => {
+                          const maxVal = Math.max(val, prev.AS.maxDayShifts);
+                          const updated = {
+                            ...prev,
+                            AS: { ...prev.AS, minDayShifts: val, maxDayShifts: maxVal }
+                          };
+                          updateRequirements(updated);
+                          return updated;
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Maxim</label>
+                    <input
+                      type="number"
+                      min={reqs.AS.minDayShifts}
+                      value={reqs.AS.maxDayShifts}
+                      onChange={(e) => {
+                        const val = Math.max(reqs.AS.minDayShifts, Number(e.target.value));
+                        setReqs(prev => {
+                          const updated = {
+                            ...prev,
+                            AS: { ...prev.AS, maxDayShifts: val }
+                          };
+                          updateRequirements(updated);
+                          return updated;
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '1.25rem' }}>
+                <h4 className="settings-section-title">Asistenți - Tura de Noapte</h4>
+                <div className="input-row">
+                  <div className="form-group">
+                    <label>Minim</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={reqs.AS.minNightShifts}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setReqs(prev => {
+                          const maxVal = Math.max(val, prev.AS.maxNightShifts);
+                          const updated = {
+                            ...prev,
+                            AS: { ...prev.AS, minNightShifts: val, maxNightShifts: maxVal }
+                          };
+                          updateRequirements(updated);
+                          return updated;
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Maxim</label>
+                    <input
+                      type="number"
+                      min={reqs.AS.minNightShifts}
+                      value={reqs.AS.maxNightShifts}
+                      onChange={(e) => {
+                        const val = Math.max(reqs.AS.minNightShifts, Number(e.target.value));
+                        setReqs(prev => {
+                          const updated = {
+                            ...prev,
+                            AS: { ...prev.AS, maxNightShifts: val }
+                          };
+                          updateRequirements(updated);
+                          return updated;
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

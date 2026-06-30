@@ -18,9 +18,9 @@ export interface DayInfo {
 }
 
 // Helper to get all Romanian legal holidays for a given year as YYYY-MM-DD strings
-function getRomanianLegalHolidays(year: number): Set<string> {
+function getLegalHolidays(year: number): Set<string> {
   const holidays = new Set<string>();
-  
+
   const addFixed = (m: number, d: number) => {
     holidays.add(`${year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
   };
@@ -34,7 +34,7 @@ function getRomanianLegalHolidays(year: number): Set<string> {
   addFixed(6, 1);   // Ziua Copilului
   addFixed(8, 15);  // Sf. Maria
   addFixed(11, 30); // Sf. Andrei
-  addFixed(12, 1);  // Ziua Nationala
+  addFixed(12, 1);  // Ziua Romaniei
   addFixed(12, 25); // Craciun
   addFixed(12, 26); // Craciun
 
@@ -47,10 +47,10 @@ function getRomanianLegalHolidays(year: number): Set<string> {
   const julianMonth = Math.floor((d + e + 114) / 31);
   const julianDay = ((d + e + 114) % 31) + 1;
   const offset = Math.floor(year / 100) - Math.floor(year / 400) - 2;
-  
+
   // Orthodox Easter Sunday Date
   const easter = new Date(year, julianMonth - 1, julianDay + offset);
-  
+
   const formatDate = (date: Date) => {
     const y = date.getFullYear();
     const mo = String(date.getMonth() + 1).padStart(2, '0');
@@ -86,8 +86,8 @@ export function getDaysInMonth(year: number, month: number): DayInfo[] {
   const date = new Date(year, month + 1, 0);
   const numDays = date.getDate();
   const days: DayInfo[] = [];
-  const holidays = getRomanianLegalHolidays(year);
-  
+  const holidays = getLegalHolidays(year);
+
   const formatDate = (d: number) => {
     const y = year;
     const mo = String(month + 1).padStart(2, '0');
@@ -182,7 +182,7 @@ export function calculateEmployeeHours(
 
   // Overtime 50% is when total hours exceed the contract hours, excluding weekend hours already counted at 100%
   let overtime50 = 0;
-  
+
   if (totalWorked > computedContractHours) {
     const totalOvertime = totalWorked - computedContractHours;
     // Overtime 100% has priority. Overtime 50% is the remaining overtime.

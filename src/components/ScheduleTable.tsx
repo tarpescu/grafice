@@ -114,10 +114,10 @@ export const ScheduleTable = ({
           <button 
             onClick={onToggleSidebar} 
             className={`btn btn-secondary toolbar-toggle-btn`}
-            title={isSidebarOpen ? 'Ascunde Personal & Setări' : 'Afișează Personal & Setări'}
+            title={isSidebarOpen ? 'Ascunde Gestiune Personal' : 'Afișează Gestiune Personal'}
           >
             {isSidebarOpen ? <ChevronLeft size={16} /> : <Menu size={16} />}
-            <span className="toggle-btn-text">Personal & Setări</span>
+            <span className="toggle-btn-text">Gestiune Personal</span>
           </button>
           <button onClick={onAutoGenerate} className="btn btn-primary">
             Generare Automată

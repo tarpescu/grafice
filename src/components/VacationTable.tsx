@@ -415,7 +415,7 @@ export const VacationTable = ({
                 {employees.length === 0 && (
                   <tr>
                     <td colSpan={22} style={{ padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                      Vă rugăm să adăugați personal din panoul "Personal & Setări" pentru a genera planificarea concediilor.
+                      Vă rugăm să adăugați personal din panoul "Gestiune Personal" pentru a genera planificarea concediilor.
                     </td>
                   </tr>
                 )}
@@ -606,7 +606,7 @@ export const VacationTable = ({
                 {employees.length === 0 && (
                   <tr>
                     <td colSpan={35} style={{ padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                      Vă rugăm să adăugați personal din panoul "Personal & Setări" pentru a vizualiza tabelul.
+                      Vă rugăm să adăugați personal din panoul "Gestiune Personal" pentru a vizualiza tabelul.
                     </td>
                   </tr>
                 )}

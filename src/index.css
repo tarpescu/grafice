@@ -134,7 +134,7 @@ body {
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
   width: 95vw !important;
-  max-width: 1100px !important;
+  max-width: 550px !important;
   max-height: 90vh !important;
   background: var(--color-bg) !important;
   box-shadow: var(--shadow-lg);
@@ -146,9 +146,7 @@ body {
   border: 1px solid var(--color-border);
   animation: modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  display: grid !important;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 1.5rem;
+  display: block !important;
 }
 
 /* Modal Close Button */
