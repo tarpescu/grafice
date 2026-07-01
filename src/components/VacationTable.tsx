@@ -5,6 +5,7 @@ import { Printer, FileDown, Trash2, CalendarRange, Table2, Upload, Download } fr
 import { ROMANIAN_MONTHS, MONTH_NAMES, MONTH_SHORT_NAMES } from '../utils/constants';
 import { downloadAsJson, importFromJsonFile } from '../utils/fileHelpers';
 import { PrintSignatures } from './PrintSignatures';
+import { useToast } from '../hooks/useToast';
 
 export interface EmployeeVacationInfo {
   jobTitle: string;
@@ -58,14 +59,15 @@ export const VacationTable = ({
   onImportVacations,
 }: VacationTableProps) => {
   const daysInfo = getDaysInMonth(year, activeMonth);
+  const { addToast } = useToast();
 
   const handlePrint = () => {
     window.print();
   };
   const handleExportPDF = () => {
     const originalTitle = document.title;
-    document.title = subTab === 'anual' 
-      ? `grafic-concedii-anual-${year}` 
+    document.title = subTab === 'anual'
+      ? `grafic-concedii-anual-${year}`
       : `grafic-concedii-${MONTH_NAMES[activeMonth].toLowerCase()}-${year}`;
     window.print();
     document.title = originalTitle;
@@ -92,10 +94,11 @@ export const VacationTable = ({
       type: 'grafic-concedii',
       year,
       month: activeMonth,
-      shifts: vacationShifts
+      shifts: vacationShifts,
     };
     const fileName = `grafic-concedii-${ROMANIAN_MONTHS[activeMonth]}-${year}.json`;
     downloadAsJson(dataToExport, fileName);
+    addToast({ type: 'success', title: 'Export reușit', message: `Fișierul ${fileName} a fost descărcat.` });
   };
 
   const handleImportVacationsClick = () => {
@@ -105,9 +108,10 @@ export const VacationTable = ({
       dataKey: 'shifts',
       onImport: (importedShifts) => {
         onImportVacations(importedShifts as { [employeeId: string]: { [day: number]: ShiftType } });
+        addToast({ type: 'success', title: 'Import reușit', message: 'Planificarea de concedii a fost importată cu succes!' });
       },
-      successMessage: 'Planificarea de concedii a fost importată cu succes!',
-      mismatchLabel: 'concedii'
+      successMessage: '',
+      mismatchLabel: 'concedii',
     });
   };
 
@@ -127,13 +131,11 @@ export const VacationTable = ({
 
   const yearShiftsData = getYearShifts();
 
-  // Count scheduled vacation days (CO and CIC) for an employee in a specific month
   const countScheduledDays = (empId: string, monthIdx: number): number => {
     const empShifts = yearShiftsData[monthIdx]?.[empId] || {};
-    return Object.values(empShifts).filter(s => s === 'CO' || s === 'CIC').length;
+    return Object.values(empShifts).filter((s) => s === 'CO' || s === 'CIC').length;
   };
 
-  // Get total allowed days allowed for an employee
   const calculateTotalPlanned = (empId: string): number => {
     const data = vacationPlanning[empId];
     if (!data || !data.monthlyPlanned) return 0;
@@ -143,7 +145,6 @@ export const VacationTable = ({
     }, 0);
   };
 
-  // Get total actual scheduled days for an employee across the entire year
   const calculateTotalScheduled = (empId: string): number => {
     let total = 0;
     for (let m = 0; m < 12; m++) {
@@ -152,8 +153,7 @@ export const VacationTable = ({
     return total;
   };
 
-  // Monthly Grid Configurations
-
+  // Monthly Grid State
   const [vacationEmpId, setVacationEmpId] = useState<string>('');
   const [vacationType, setVacationType] = useState<'CO' | 'CIC'>('CO');
   const [vacationStartDay, setVacationStartDay] = useState<number>(1);
@@ -161,18 +161,18 @@ export const VacationTable = ({
 
   const handleApplyVacation = () => {
     if (!vacationEmpId) {
-      alert("Vă rugăm să selectați un salariat!");
+      addToast({ type: 'warning', title: 'Selectați un salariat', message: 'Vă rugăm să selectați un salariat înainte de a aplica concediul.' });
       return;
     }
     const maxDay = daysInfo.length;
     const startDay = Math.min(vacationStartDay, maxDay);
     const endDay = Math.min(vacationEndDay, maxDay);
     if (startDay < 1 || startDay > maxDay || endDay < 1 || endDay > maxDay) {
-      alert("Zilele selectate sunt în afara limitelor lunii!");
+      addToast({ type: 'error', title: 'Eroare', message: 'Zilele selectate sunt în afara limitelor lunii!' });
       return;
     }
     if (startDay > endDay) {
-      alert("Ziua de început nu poate fi mai mare decât ziua de sfârșit!");
+      addToast({ type: 'error', title: 'Eroare', message: 'Ziua de început nu poate fi mai mare decât ziua de sfârșit!' });
       return;
     }
     const batchDays: { day: number; shift: ShiftType }[] = [];
@@ -180,8 +180,12 @@ export const VacationTable = ({
       batchDays.push({ day: d, shift: vacationType });
     }
     onBatchShiftChange(vacationEmpId, batchDays);
-    const empName = employees.find(e => e.id === vacationEmpId)?.name || '';
-    alert(`S-a aplicat concediul de tip ${vacationType} pentru ${empName} în perioada ${startDay}-${endDay} ${MONTH_NAMES[activeMonth]}.`);
+    const empName = employees.find((e) => e.id === vacationEmpId)?.name || '';
+    addToast({
+      type: 'success',
+      title: 'Concediu aplicat',
+      message: `${vacationType} pentru ${empName} în perioada ${startDay}-${endDay} ${MONTH_NAMES[activeMonth]}.`,
+    });
     setVacationEmpId('');
   };
 
@@ -196,25 +200,21 @@ export const VacationTable = ({
               onClick={() => setSubTab('anual')}
               className={`filter-tab ${subTab === 'anual' ? 'active' : ''}`}
             >
-              <Table2 size={14} style={{ marginRight: '4px' }} />
-              Tabel Anual (Programare)
+              <Table2 size={14} />
+              Tabel Anual
             </button>
             <button
               onClick={() => setSubTab('lunar')}
               className={`filter-tab ${subTab === 'lunar' ? 'active' : ''}`}
             >
-              <CalendarRange size={14} style={{ marginRight: '4px' }} />
-              Planificare Lunară (1-31)
+              <CalendarRange size={14} />
+              Planificare Lunară
             </button>
           </div>
 
           {subTab === 'anual' && (
-            <button 
-              onClick={onClearVacations} 
-              className="btn btn-secondary" 
-              style={{ color: '#ef4444' }}
-            >
-              <Trash2 size={16} />
+            <button onClick={onClearVacations} className="btn btn-danger btn-sm">
+              <Trash2 size={13} />
               Șterge Programări
             </button>
           )}
@@ -223,33 +223,31 @@ export const VacationTable = ({
         <div className="toolbar-group-small">
           {subTab === 'lunar' && (
             <>
-              <button onClick={handleImportVacationsClick} className="btn btn-secondary" title="Importă planificare concedii din fișier JSON">
-                <Upload size={16} />
-                Importă Concedii
+              <button onClick={handleImportVacationsClick} className="btn btn-secondary btn-sm" title="Importă planificare concedii din fișier JSON">
+                <Upload size={14} />
+                Importă
               </button>
-              <button onClick={handleExportVacations} className="btn btn-secondary" title="Exportă planificare concedii în format JSON">
-                <Download size={16} />
-                Exportă Concedii
+              <button onClick={handleExportVacations} className="btn btn-secondary btn-sm" title="Exportă planificare concedii în format JSON">
+                <Download size={14} />
+                Exportă
               </button>
+              <div className="toolbar-divider" />
             </>
           )}
-          <button onClick={handlePrint} className="btn btn-secondary">
-            <Printer size={16} />
+          <button onClick={handlePrint} className="btn btn-secondary btn-sm">
+            <Printer size={14} />
             Imprimă
           </button>
-          <button onClick={handleExportPDF} className="btn btn-secondary">
-            <FileDown size={16} />
-            Exportă PDF
+          <button onClick={handleExportPDF} className="btn btn-secondary btn-sm">
+            <FileDown size={14} />
+            PDF
           </button>
         </div>
       </div>
 
       {/* Main Table Wrapper */}
       <div className="table-wrapper">
-        
-        {/* ======================================================== */}
-        {/* MODE 1: ANNUAL SUMMARY TABLE                             */}
-        {/* ======================================================== */}
+        {/* MODE 1: ANNUAL SUMMARY TABLE */}
         {subTab === 'anual' && (
           <>
             {/* Printable/Display Header */}
@@ -320,7 +318,7 @@ export const VacationTable = ({
                     seniorityTotal: '',
                     seniorityUnit: '',
                     vacationDaysAllowed: '',
-                    monthlyPlanned: {}
+                    monthlyPlanned: {},
                   };
 
                   const totalPlanned = calculateTotalPlanned(emp.id);
@@ -379,14 +377,13 @@ export const VacationTable = ({
                               onChange={(e) => {
                                 const updatedMonthly = {
                                   ...(info.monthlyPlanned || {}),
-                                  [mIdx]: e.target.value
+                                  [mIdx]: e.target.value,
                                 };
                                 onUpdateVacation(emp.id, { monthlyPlanned: updatedMonthly });
                               }}
                               className="table-cell-input text-center"
                               placeholder=""
                             />
-                            {/* Small badge to show how many days are scheduled in the shifts grid */}
                             {scheduled > 0 && (
                               <span className="scheduled-badge-count" title={`${scheduled} zile planificate în graficul de gărzi`}>
                                 {scheduled}g
@@ -396,17 +393,12 @@ export const VacationTable = ({
                         );
                       })}
 
-                      {/* Dynamic Total Planned Column (No print) */}
                       <td style={{ fontWeight: 600 }} className="no-print-col">
                         {totalPlanned > 0 ? totalPlanned : ''}
                       </td>
-
-                      {/* Dynamic Total Scheduled Column (No print) */}
                       <td style={{ fontWeight: 600, color: '#166534' }} className="no-print-col">
                         {totalScheduled > 0 ? totalScheduled : ''}
                       </td>
-
-                      {/* Signature Column */}
                       <td className="signature-cell-placeholder"></td>
                     </tr>
                   );
@@ -415,14 +407,14 @@ export const VacationTable = ({
                 {employees.length === 0 && (
                   <tr>
                     <td colSpan={22} style={{ padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                      Vă rugăm să adăugați personal din panoul "Gestiune Personal" pentru a genera planificarea concediilor.
+                      Adăugați personal din sidebar pentru a genera planificarea concediilor.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
 
-            {/* Legal Disclaimers (Romanian labor law) */}
+            {/* Legal Disclaimers */}
             <div className="vacation-disclaimer">
               <p>nr.zile = durata efectivă a CO + fidelitate (la fiecare 5 ani în aceeași unitate, câte o zi) + condiții de muncă</p>
               <p>În anul {year}, concediul de odihnă suplimentar pentru condiții deosebite este de 5 zile lucrătoare conform OUG nr.36/2025 art.II.</p>
@@ -435,17 +427,14 @@ export const VacationTable = ({
               </ul>
             </div>
 
-            {/* Printable/Display Signatures */}
             <PrintSignatures className="vacation-signatures" />
           </>
         )}
 
-        {/* ======================================================== */}
-        {/* MODE 2: MONTHLY 1-31 CALENDAR PLANNING GRID               */}
-        {/* ======================================================== */}
+        {/* MODE 2: MONTHLY 1-31 CALENDAR PLANNING GRID */}
         {subTab === 'lunar' && (
           <>
-            {/* Printable Header Info */}
+            {/* Print Header */}
             <div className="print-only-header">
               <div className="print-header-top">
                 <div>
@@ -462,7 +451,7 @@ export const VacationTable = ({
               </p>
             </div>
 
-            {/* Planificare Rapidă Concediu (Perioadă) */}
+            {/* Quick Vacation Planner */}
             <div className="no-print vacation-planner-inline-card">
               <div className="card-title-small">Planificare Rapidă Concediu (Perioadă)</div>
               <div className="inline-form-row">
@@ -481,7 +470,7 @@ export const VacationTable = ({
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="form-group">
                   <label htmlFor="vacationType">Tip Concediu</label>
                   <select
@@ -502,9 +491,7 @@ export const VacationTable = ({
                     onChange={(e) => setVacationStartDay(Number(e.target.value))}
                   >
                     {daysInfo.map((d) => (
-                      <option key={d.day} value={d.day}>
-                        {d.day}
-                      </option>
+                      <option key={d.day} value={d.day}>{d.day}</option>
                     ))}
                   </select>
                 </div>
@@ -517,21 +504,17 @@ export const VacationTable = ({
                     onChange={(e) => setVacationEndDay(Number(e.target.value))}
                   >
                     {daysInfo.map((d) => (
-                      <option key={d.day} value={d.day}>
-                        {d.day}
-                      </option>
+                      <option key={d.day} value={d.day}>{d.day}</option>
                     ))}
                   </select>
                 </div>
 
-                <button
-                  onClick={handleApplyVacation}
-                  className="btn btn-primary apply-vacation-btn"
-                >
+                <button onClick={handleApplyVacation} className="btn btn-primary apply-vacation-btn">
                   Aplică Concediu
                 </button>
               </div>
             </div>
+
             <table className="schedule-table vacation-calendar-grid">
               <colgroup>
                 <col style={{ width: '25px' }} />
@@ -548,7 +531,11 @@ export const VacationTable = ({
                   <th className="col-name" style={{ minWidth: '150px' }}>Numele și prenumele</th>
                   <th style={{ width: '50px' }}>Funcția</th>
                   {daysInfo.map((d) => (
-                    <th key={d.day} className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`} style={{ fontSize: '9px', padding: '3px' }}>
+                    <th
+                      key={d.day}
+                      className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''}`}
+                      style={{ fontSize: '9px', padding: '3px' }}
+                    >
                       {d.day}
                     </th>
                   ))}
@@ -558,25 +545,19 @@ export const VacationTable = ({
               <tbody>
                 {employees.map((emp, index) => {
                   const empShifts = yearShiftsData[activeMonth]?.[emp.id] || {};
-                  
-                  // Calculate total vacation days scheduled this month
-                  const totalCOThisMonth = Object.values(empShifts).filter(s => s === 'CO' || s === 'CIC').length;
+                  const totalCOThisMonth = Object.values(empShifts).filter((s) => s === 'CO' || s === 'CIC').length;
 
                   return (
                     <tr key={emp.id}>
                       <td>{index + 1}</td>
                       <td className="col-name">{emp.name}</td>
                       <td>{emp.role}</td>
-
-                      {/* 1-31 Days Columns */}
                       {daysInfo.map((d) => {
                         const shift = empShifts[d.day] || '-';
-                        // Keep only vacation types (CO/CIC) or free (-)
-                        const activeVal = (shift === 'CO' || shift === 'CIC') ? shift : '-';
-
+                        const activeVal = shift === 'CO' || shift === 'CIC' ? shift : '-';
                         return (
-                          <td 
-                            key={d.day} 
+                          <td
+                            key={d.day}
                             className={`${d.isWeekend ? 'weekend' : ''} ${d.isHoliday ? 'legal-holiday' : ''} shift-cell shift-${activeVal} cell-nopadding`}
                           >
                             <span className="print-only-value">{activeVal === '-' ? '' : activeVal}</span>
@@ -595,7 +576,6 @@ export const VacationTable = ({
                           </td>
                         );
                       })}
-
                       <td style={{ fontWeight: 600, color: '#166534' }}>
                         {totalCOThisMonth > 0 ? `${totalCOThisMonth} zile` : ''}
                       </td>
@@ -606,18 +586,16 @@ export const VacationTable = ({
                 {employees.length === 0 && (
                   <tr>
                     <td colSpan={35} style={{ padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                      Vă rugăm să adăugați personal din panoul "Gestiune Personal" pentru a vizualiza tabelul.
+                      Adăugați personal din sidebar pentru a vizualiza tabelul.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
 
-            {/* Printable Signatures */}
             <PrintSignatures />
           </>
         )}
-
       </div>
     </div>
   );
