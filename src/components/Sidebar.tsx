@@ -166,34 +166,75 @@ export const Sidebar = ({
               <div className="sidebar-config-row">
                 <div className="form-group">
                   <label>Minim</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={reqs.AS.minDayShifts}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      const maxVal = Math.max(val, reqs.AS.maxDayShifts);
-                      onUpdateReqs({
-                        ...reqs,
-                        AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: maxVal },
-                      });
-                    }}
-                  />
+                  <div className="custom-number-input">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = Math.max(0, reqs.AS.minDayShifts - 1);
+                        const maxVal = Math.max(val, reqs.AS.maxDayShifts);
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: maxVal },
+                        });
+                      }}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={reqs.AS.minDayShifts}
+                      readOnly
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = reqs.AS.minDayShifts + 1;
+                        const maxVal = Math.max(val, reqs.AS.maxDayShifts);
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: maxVal },
+                        });
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Maxim</label>
-                  <input
-                    type="number"
-                    min={reqs.AS.minDayShifts}
-                    value={reqs.AS.maxDayShifts}
-                    onChange={(e) => {
-                      const val = Math.max(reqs.AS.minDayShifts, Number(e.target.value));
-                      onUpdateReqs({
-                        ...reqs,
-                        AS: { ...reqs.AS, maxDayShifts: val },
-                      });
-                    }}
-                  />
+                  <div className="custom-number-input">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = Math.max(reqs.AS.minDayShifts, reqs.AS.maxDayShifts - 1);
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, maxDayShifts: val },
+                        });
+                      }}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={reqs.AS.minDayShifts}
+                      value={reqs.AS.maxDayShifts}
+                      readOnly
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = reqs.AS.maxDayShifts + 1;
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, maxDayShifts: val },
+                        });
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -202,34 +243,75 @@ export const Sidebar = ({
               <div className="sidebar-config-row">
                 <div className="form-group">
                   <label>Minim</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={reqs.AS.minNightShifts}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      const maxVal = Math.max(val, reqs.AS.maxNightShifts);
-                      onUpdateReqs({
-                        ...reqs,
-                        AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: maxVal },
-                      });
-                    }}
-                  />
+                  <div className="custom-number-input">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = Math.max(0, reqs.AS.minNightShifts - 1);
+                        const maxVal = Math.max(val, reqs.AS.maxNightShifts);
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: maxVal },
+                        });
+                      }}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={reqs.AS.minNightShifts}
+                      readOnly
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = reqs.AS.minNightShifts + 1;
+                        const maxVal = Math.max(val, reqs.AS.maxNightShifts);
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: maxVal },
+                        });
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Maxim</label>
-                  <input
-                    type="number"
-                    min={reqs.AS.minNightShifts}
-                    value={reqs.AS.maxNightShifts}
-                    onChange={(e) => {
-                      const val = Math.max(reqs.AS.minNightShifts, Number(e.target.value));
-                      onUpdateReqs({
-                        ...reqs,
-                        AS: { ...reqs.AS, maxNightShifts: val },
-                      });
-                    }}
-                  />
+                  <div className="custom-number-input">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = Math.max(reqs.AS.minNightShifts, reqs.AS.maxNightShifts - 1);
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, maxNightShifts: val },
+                        });
+                      }}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={reqs.AS.minNightShifts}
+                      value={reqs.AS.maxNightShifts}
+                      readOnly
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const val = reqs.AS.maxNightShifts + 1;
+                        onUpdateReqs({
+                          ...reqs,
+                          AS: { ...reqs.AS, maxNightShifts: val },
+                        });
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -601,6 +601,68 @@ body {
 }
 
 /* Sidebar Footer */
+.sidebar-config-row input[type="number"]::-webkit-inner-spin-button,
+.sidebar-config-row input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sidebar-config-row input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.custom-number-input {
+  display: flex;
+  align-items: center;
+  background: var(--sidebar-bg-hover);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  height: 38px;
+}
+
+.custom-number-input input {
+  border: none !important;
+  background: transparent !important;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--sidebar-text-bright);
+  padding: 0 !important;
+  width: 100% !important;
+  box-shadow: none !important;
+}
+
+.custom-number-input button {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--sidebar-accent); /* Cyan distinctiv și vizibil */
+  border: none;
+  font-weight: 800;
+  font-size: 1.1rem;
+  width: 32px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.custom-number-input button:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-bg);
+}
+
+.custom-number-input button:active {
+  transform: scale(0.9);
+}
+
+/* Stil de rezervă pentru browserele ce folosesc color-scheme */
+.sidebar-config-row input {
+  color-scheme: dark;
+}
+
 .sidebar-footer {
   padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--sidebar-border);
