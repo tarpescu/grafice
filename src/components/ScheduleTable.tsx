@@ -5,6 +5,7 @@ import { Printer, AlertTriangle, FileDown, Trash2, Upload, Download, Zap } from 
 import type { ValidationWarning } from '../utils/scheduler';
 import { ROMANIAN_MONTHS, MONTH_NAMES } from '../utils/constants';
 import { downloadAsJson, importFromJsonFile } from '../utils/fileHelpers';
+import { downloadSchedulePDF } from '../utils/pdfExport';
 import { PrintSignatures } from './PrintSignatures';
 import { useToast } from '../hooks/useToast';
 
@@ -41,11 +42,8 @@ export const ScheduleTable = ({
   };
 
   const handleExportPDF = () => {
-    const originalTitle = document.title;
-    const formattedMonth = ROMANIAN_MONTHS[month];
-    document.title = `grafic-${formattedMonth}-${year}`;
-    window.print();
-    document.title = originalTitle;
+    downloadSchedulePDF(employees, shifts, year, month);
+    addToast({ type: 'success', title: 'PDF descărcat', message: `Fișierul PDF a fost generat și descărcat.` });
   };
 
   const handleExportShifts = () => {

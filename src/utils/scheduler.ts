@@ -210,26 +210,31 @@ export function autoGenerateSchedule(
     if (emp.shiftPattern === '8h') {
       const targetShifts = Math.max(0, workingDays - getEmployeeCOWeekdays(emp.id, weekdays, lockedShifts));
 
+      // Count how many '8' shifts are already assigned (from locked shifts)
+      let alreadyAssigned = 0;
       days.forEach((dayInfo) => {
-        const locked = lockedShifts[emp.id]?.[dayInfo.day];
-        if (!locked || locked === '-') {
-          shifts[emp.id][dayInfo.day] = '8';
-          hoursTracker[emp.id] += 8;
+        if (shifts[emp.id][dayInfo.day] === '8') {
+          alreadyAssigned++;
         }
       });
 
-      const assignedDays = days.filter(d => shifts[emp.id][d.day] === '8');
-      const toRemove = assignedDays.length - targetShifts;
-      
-      if (toRemove > 0) {
-        const removableDays = assignedDays.filter(d => !lockedShifts[emp.id]?.[d.day] && !d.isHoliday);
-        const actualRemove = Math.min(toRemove, removableDays.length);
-        for (let i = 0; i < actualRemove; i++) {
-          const index = Math.floor((i * removableDays.length) / actualRemove);
-          const dayInfo = removableDays[index];
-          shifts[emp.id][dayInfo.day] = '-';
-          hoursTracker[emp.id] -= 8;
-        }
+      // Only fill remaining slots up to the target
+      const slotsToFill = Math.max(0, targetShifts - alreadyAssigned);
+
+      // Collect available (empty) days
+      const availableDays = days.filter((dayInfo) => {
+        const current = shifts[emp.id][dayInfo.day];
+        return current === '-';
+      });
+
+      // Distribute shifts evenly across available days
+      const toAssign = Math.min(slotsToFill, availableDays.length);
+      for (let i = 0; i < toAssign; i++) {
+        // Spread evenly by picking at regular intervals
+        const index = Math.floor((i * availableDays.length) / toAssign);
+        const dayInfo = availableDays[index];
+        shifts[emp.id][dayInfo.day] = '8';
+        hoursTracker[emp.id] += 8;
       }
     }
   });
