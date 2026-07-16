@@ -54,6 +54,8 @@
   --color-shift-co-bg: #dcfce7;
   --color-shift-cic: #9333ea;
   --color-shift-cic-bg: #f3e8ff;
+  --color-shift-l: #ea580c;
+  --color-shift-l-bg: #ffedd5;
   --color-shift-off: #f1f5f9;
   --color-shift-err: #dc2626;
 
@@ -991,6 +993,12 @@ select:focus {
   color: var(--color-shift-cic);
 }
 
+.shift-cell.shift-L {
+  background-color: var(--color-shift-l-bg);
+  color: var(--color-shift-l);
+  font-weight: bold;
+}
+
 .shift-err {
   border: 2px solid var(--color-shift-err) !important;
   background-color: #fef2f2 !important;
@@ -1025,6 +1033,57 @@ select:focus {
 .schedule-table td.legal-holiday {
   background-color: #ffe4e6 !important;
   color: #e11d48;
+}
+
+/* ============================================================
+   LEGEND
+   ============================================================ */
+.schedule-legend {
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background-color: var(--color-card);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  page-break-inside: avoid;
+}
+
+.legend-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+.legend-color {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
 /* ============================================================
@@ -1950,4 +2009,13 @@ select:focus {
   font-size: 0.75rem;
   border-radius: 4px;
   border: 1px solid var(--color-border);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

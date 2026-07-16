@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import type { Employee } from '../utils/calculations';
-import { UserPlus, Trash2, Users } from 'lucide-react';
+import { UserPlus, Trash2 } from 'lucide-react';
 
 interface StaffManagerProps {
   employees: Employee[];
-  onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
+  onAddEmployee: (emp: Omit<Employee, 'id'>) => void;
   onRemoveEmployee: (id: string) => void;
-  onUpdateEmployee: (id: string, updatedFields: Partial<Employee>) => void;
+  onUpdateEmployee: (id: string, fields: Partial<Employee>) => void;
 }
 
 export const StaffManager = ({
@@ -15,99 +15,80 @@ export const StaffManager = ({
   onRemoveEmployee,
   onUpdateEmployee,
 }: StaffManagerProps) => {
-  const [name, setName] = useState('');
-  const [shiftPattern, setShiftPattern] = useState<'normal' | '8h'>('normal');
+  const [newName, setNewName] = useState('');
+  const [newPattern, setNewPattern] = useState<'normal' | '8h'>('normal');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
+    if (!newName.trim()) return;
     onAddEmployee({
-      name: name.trim(),
+      name: newName.trim(),
       role: 'AS',
       active: true,
-      shiftPattern,
+      shiftPattern: newPattern,
     });
-    setName('');
+    setNewName('');
   };
 
   return (
-    <div className="card">
-      <div className="card-title">
-        <span>Gestiune Personal</span>
-        <Users size={20} className="no-print" />
-      </div>
+    <div className="sidebar-section">
+      <div className="sidebar-section-title">Gestiune Personal</div>
 
-      <form onSubmit={handleSubmit} className="no-print staff-form">
-        <div className="form-group">
-          <label htmlFor="staff-name">Nume și Prenume</label>
-          <input
-            id="staff-name"
-            type="text"
-            placeholder="Ex: POPESCU IONELA"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+      <form onSubmit={handleAddSubmit} className="sidebar-staff-form">
+        <input
+          type="text"
+          placeholder="Nume și Prenume (ex: POPESCU IONELA)"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          required
+        />
+        <div className="form-row">
+          <select
+            value={newPattern}
+            onChange={(e) => setNewPattern(e.target.value as 'normal' | '8h')}
+          >
+            <option value="normal">Zi/Noapte/8h/4h</option>
+            <option value="8h">Doar 8h</option>
+          </select>
+          <button type="submit" className="sidebar-add-btn" style={{ width: 'auto', flex: '0 0 auto' }}>
+            <UserPlus size={14} />
+          </button>
         </div>
-
-        <div className="staff-form-row">
-          <div className="form-group">
-            <label htmlFor="staff-pattern">Model Tură</label>
-            <select
-              id="staff-pattern"
-              value={shiftPattern}
-              onChange={(e) => setShiftPattern(e.target.value as 'normal' | '8h')}
-            >
-              <option value="normal">Zi/Noapte/8h/4h</option>
-              <option value="8h">Doar 8h</option>
-            </select>
-          </div>
-        </div>
-
-        <button type="submit" className="btn btn-primary">
-          <UserPlus size={16} />
-          Adaugă Personal
-        </button>
       </form>
 
-      <div className="staff-list-container">
-        <h3 className="staff-list-title">
-          Membri Secție ({employees.length})
-        </h3>
-        <div className="staff-list">
-          {employees.map((emp) => (
-            <div key={emp.id} className="staff-item">
-              <div className="staff-info">
-                <h4>{emp.name}</h4>
-                <div className="staff-meta">
-                  {/* Shift Pattern Selector Badge */}
-                  <select
-                    value={emp.shiftPattern || 'normal'}
-                    onChange={(e) => onUpdateEmployee(emp.id, { shiftPattern: e.target.value as 'normal' | '8h' })}
-                    className={`staff-select-inline ${emp.shiftPattern === '8h' ? 'staff-select-pattern-8h' : 'staff-select-pattern-normal'}`}
-                  >
-                    <option value="normal">Zi/Noapte/8h/4h</option>
-                    <option value="8h">Doar 8h</option>
-                  </select>
+      <div className="sidebar-staff-count">
+        {employees.length} angajați în secție
+      </div>
 
-                </div>
-              </div>
-              <button
-                onClick={() => onRemoveEmployee(emp.id)}
-                className="btn btn-secondary no-print btn-delete"
-                title="Șterge Angajat"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
-          {employees.length === 0 && (
-            <p className="staff-empty-message">
-              Niciun angajat înregistrat pe această secție.
-            </p>
-          )}
-        </div>
+      <div className="sidebar-staff-list">
+        {employees.map((emp) => (
+          <div key={emp.id} className="sidebar-staff-item">
+            <span className="staff-name" title={emp.name}>{emp.name}</span>
+            <button
+              className={`staff-pattern-badge ${emp.shiftPattern === '8h' ? 'eight-h' : 'normal'}`}
+              onClick={() =>
+                onUpdateEmployee(emp.id, {
+                  shiftPattern: emp.shiftPattern === '8h' ? 'normal' : '8h',
+                })
+              }
+              title="Click pentru a schimba modelul de tură"
+            >
+              {emp.shiftPattern === '8h' ? '8H' : 'Z/N'}
+            </button>
+            <button
+              className="staff-delete-btn"
+              onClick={() => onRemoveEmployee(emp.id)}
+              title="Șterge angajat"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        ))}
+        {employees.length === 0 && (
+          <div className="sidebar-staff-count" style={{ textAlign: 'center', padding: '1rem 0' }}>
+            Niciun angajat înregistrat.
+          </div>
+        )}
       </div>
     </div>
   );

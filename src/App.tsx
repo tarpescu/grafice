@@ -170,7 +170,7 @@ function App() {
   const handleClearSchedule = () => {
     showConfirm({
       title: 'Șterge Turele',
-      message: 'Sigur doriți să ștergeți turele? Concediile (CO/CIC) vor fi păstrate.',
+      message: 'Sigur doriți să ștergeți turele? Concediile (CO/CIC) și Zilele Libere cerute (L) vor fi păstrate.',
       variant: 'warning',
       confirmText: 'Șterge Ture',
       onConfirm: () => {
@@ -179,7 +179,7 @@ function App() {
           const empShifts = shifts[emp.id] || {};
           const preserved: { [day: number]: ShiftType } = {};
           for (const [dayStr, shift] of Object.entries(empShifts)) {
-            if (shift === 'CO' || shift === 'CIC') {
+            if (shift === 'CO' || shift === 'CIC' || shift === 'L') {
               preserved[Number(dayStr)] = shift;
             }
           }
@@ -187,7 +187,7 @@ function App() {
         });
         setShifts(cleared);
         closeConfirm();
-        addToast({ type: 'success', title: 'Ture șterse', message: 'Turele au fost șterse. Concediile au fost păstrate.' });
+        addToast({ type: 'success', title: 'Ture șterse', message: 'Turele au fost șterse. Concediile și liberele au fost păstrate.' });
       },
     });
   };
@@ -311,7 +311,6 @@ function App() {
               onBatchShiftChange={handleBatchShiftChange}
               activeMonth={month}
               subTab={vacationSubTab}
-              setSubTab={(sub) => setActiveTab(sub === 'anual' ? 'concedii-anual' : 'concedii-lunar')}
               onImportVacations={handleImportVacations}
             />
           )}

@@ -5,9 +5,7 @@ export interface Employee {
   active: boolean;
   shiftPattern?: 'normal' | '8h';
 }
-
-export type ShiftType = 'Z' | 'N' | '8' | '4' | 'CO' | 'CIC' | '-';
-
+export type ShiftType = 'Z' | 'N' | '8' | '4' | 'CO' | 'CIC' | 'L' | '-';
 
 
 export interface DayInfo {

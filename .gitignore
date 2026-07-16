@@ -59,3 +59,14 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Electron
+dist-electron/
+release/
+out/
+*.exe
+*.AppImage
+*.dmg
+*.zip
+*.deb
+*.rpm

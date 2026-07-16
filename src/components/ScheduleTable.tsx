@@ -1,14 +1,12 @@
 
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth, calculateEmployeeHours } from '../utils/calculations';
-import { Printer, AlertTriangle, FileDown, Trash2, Upload, Download, Zap } from 'lucide-react';
+import { AlertTriangle, FileDown, Trash2, Upload, Download, Zap } from 'lucide-react';
 import type { ValidationWarning } from '../utils/scheduler';
 import { ROMANIAN_MONTHS, MONTH_NAMES } from '../utils/constants';
 import { downloadAsJson, importFromJsonFile } from '../utils/fileHelpers';
 import { downloadSchedulePDF } from '../utils/pdfExport';
-import { PrintSignatures } from './PrintSignatures';
 import { useToast } from '../hooks/useToast';
-
 interface ScheduleTableProps {
   employees: Employee[];
   shifts: { [employeeId: string]: { [day: number]: ShiftType } };
@@ -21,6 +19,54 @@ interface ScheduleTableProps {
   onClearAll: () => void;
   onImportShifts: (shifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
+
+const ScheduleLegend = () => (
+  <div className="schedule-legend">
+    <div className="legend-title">Legendă Grafic:</div>
+    <div className="legend-items">
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: '#fef9c3' }}></span>
+        <span>Zile de weekend (Sâmbătă, Duminică)</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: '#ffe4e6', color: '#e11d48' }}></span>
+        <span>Sărbătoare Legală</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-z-bg)', color: 'var(--color-shift-z)' }}>Z</span>
+        <span>Tura Zi (12h)</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-n-bg)', color: 'var(--color-shift-n)' }}>N</span>
+        <span>Tura Noapte (12h)</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-8-bg)', color: 'var(--color-shift-8)' }}>8</span>
+        <span>Tura de 8h</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-4-bg)', color: 'var(--color-shift-4)' }}>4</span>
+        <span>Tura de 4h</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-l-bg)', color: 'var(--color-shift-l)' }}>L</span>
+        <span>Liber cerut / Indisponibil</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-co-bg)', color: 'var(--color-shift-co)' }}>CO</span>
+        <span>Concediu de Odihnă</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color" style={{ backgroundColor: 'var(--color-shift-cic-bg)', color: 'var(--color-shift-cic)' }}>CIC</span>
+        <span>Concediu Îngrijire Copil</span>
+      </div>
+      <div className="legend-item">
+        <span className="legend-color shift-err"></span>
+        <span>Eroare / Încălcare Codul Muncii</span>
+      </div>
+    </div>
+  </div>
+);
 
 export const ScheduleTable = ({
   employees,
@@ -36,10 +82,6 @@ export const ScheduleTable = ({
 }: ScheduleTableProps) => {
   const daysInfo = getDaysInMonth(year, month);
   const { addToast } = useToast();
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handleExportPDF = () => {
     downloadSchedulePDF(employees, shifts, year, month);
@@ -62,7 +104,9 @@ export const ScheduleTable = ({
         onImportShifts(importedData as { [employeeId: string]: { [day: number]: ShiftType } });
         addToast({ type: 'success', title: 'Import reușit', message: 'Graficul de ture a fost importat cu succes!' });
       },
-      successMessage: '',
+      onError: (message) => {
+        addToast({ type: 'error', title: 'Eroare la import', message });
+      },
       mismatchLabel: 'date',
     });
   };
@@ -101,6 +145,7 @@ export const ScheduleTable = ({
               <option value="4">4</option>
             </>
           )}
+          <option value="L">L</option>
           <option value="CO">CO</option>
           <option value="CIC">CIC</option>
         </select>
@@ -138,10 +183,6 @@ export const ScheduleTable = ({
             Exportă
           </button>
           <div className="toolbar-divider" />
-          <button onClick={handlePrint} className="btn btn-secondary btn-sm">
-            <Printer size={14} />
-            Imprimă
-          </button>
           <button onClick={handleExportPDF} className="btn btn-secondary btn-sm">
             <FileDown size={14} />
             PDF
@@ -258,7 +299,7 @@ export const ScheduleTable = ({
           </tbody>
         </table>
 
-        <PrintSignatures />
+        <ScheduleLegend />
       </div>
     </div>
   );

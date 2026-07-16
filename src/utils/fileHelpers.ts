@@ -4,15 +4,17 @@ import { ROMANIAN_MONTHS } from './constants';
  * Downloads a data object as a JSON file.
  */
 export function downloadAsJson(data: unknown, fileName: string): void {
-  const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-    JSON.stringify(data, null, 2)
-  )}`;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
   const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute('href', jsonString);
+  downloadAnchor.setAttribute('href', url);
   downloadAnchor.setAttribute('download', fileName);
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
-  downloadAnchor.remove();
+  
+  document.body.removeChild(downloadAnchor);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -24,10 +26,10 @@ export function importFromJsonFile(options: {
   expectedMonth: number;
   dataKey: string;
   onImport: (data: { [key: string]: unknown }) => void;
-  successMessage: string;
+  onError?: (message: string) => void;
   mismatchLabel: string;
 }): void {
-  const { expectedYear, expectedMonth, dataKey, onImport, successMessage, mismatchLabel } = options;
+  const { expectedYear, expectedMonth, dataKey, onImport, onError, mismatchLabel } = options;
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -49,7 +51,8 @@ export function importFromJsonFile(options: {
         }
 
         if (!importedData || typeof importedData !== 'object') {
-          alert('Datele din fișier sunt invalide!');
+          if (onError) onError('Datele din fișier sunt invalide!');
+          else alert('Datele din fișier sunt invalide!');
           return;
         }
 
@@ -63,9 +66,9 @@ export function importFromJsonFile(options: {
         }
 
         onImport(importedData as { [key: string]: unknown });
-        alert(successMessage);
       } catch {
-        alert('Fișierul selectat nu este un JSON valid sau este corupt!');
+        if (onError) onError('Fișierul selectat nu este un JSON valid sau este corupt!');
+        else alert('Fișierul selectat nu este un JSON valid sau este corupt!');
       }
     };
     reader.readAsText(file);

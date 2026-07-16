@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { Employee, ShiftType } from '../utils/calculations';
 import { getDaysInMonth } from '../utils/calculations';
-import { Printer, FileDown, Trash2, CalendarRange, Table2, Upload, Download } from 'lucide-react';
+import { FileDown, Trash2, Upload, Download } from 'lucide-react';
 import { ROMANIAN_MONTHS, MONTH_NAMES, MONTH_SHORT_NAMES } from '../utils/constants';
 import { downloadAsJson, importFromJsonFile } from '../utils/fileHelpers';
-import { PrintSignatures } from './PrintSignatures';
+import { downloadVacationAnnualPDF, downloadVacationMonthlyPDF } from '../utils/pdfExport';
 import { useToast } from '../hooks/useToast';
 
 export interface EmployeeVacationInfo {
@@ -38,7 +38,6 @@ interface VacationTableProps {
   onBatchShiftChange: (employeeId: string, days: { day: number; shift: ShiftType }[]) => void;
   activeMonth: number;
   subTab: 'anual' | 'lunar';
-  setSubTab: (subTab: 'anual' | 'lunar') => void;
   onImportVacations: (vacationShifts: { [employeeId: string]: { [day: number]: ShiftType } }) => void;
 }
 
@@ -55,22 +54,17 @@ export const VacationTable = ({
   onBatchShiftChange,
   activeMonth,
   subTab,
-  setSubTab,
   onImportVacations,
 }: VacationTableProps) => {
   const daysInfo = getDaysInMonth(year, activeMonth);
   const { addToast } = useToast();
 
-  const handlePrint = () => {
-    window.print();
-  };
   const handleExportPDF = () => {
-    const originalTitle = document.title;
-    document.title = subTab === 'anual'
-      ? `grafic-concedii-anual-${year}`
-      : `grafic-concedii-${MONTH_NAMES[activeMonth].toLowerCase()}-${year}`;
-    window.print();
-    document.title = originalTitle;
+    if (subTab === 'anual') {
+      downloadVacationAnnualPDF(employees, vacationPlanning, metadata, year);
+    } else {
+      downloadVacationMonthlyPDF(employees, shifts, year, activeMonth);
+    }
   };
 
   const handleExportVacations = () => {
@@ -110,7 +104,9 @@ export const VacationTable = ({
         onImportVacations(importedShifts as { [employeeId: string]: { [day: number]: ShiftType } });
         addToast({ type: 'success', title: 'Import reușit', message: 'Planificarea de concedii a fost importată cu succes!' });
       },
-      successMessage: '',
+      onError: (message) => {
+        addToast({ type: 'error', title: 'Eroare la import', message });
+      },
       mismatchLabel: 'concedii',
     });
   };
@@ -194,24 +190,6 @@ export const VacationTable = ({
       {/* Action Buttons & Sub-Tabs Navigation (No print) */}
       <div className="no-print toolbar-container">
         <div className="toolbar-group">
-          {/* Sub-Tabs Selector */}
-          <div className="filter-tabs-container">
-            <button
-              onClick={() => setSubTab('anual')}
-              className={`filter-tab ${subTab === 'anual' ? 'active' : ''}`}
-            >
-              <Table2 size={14} />
-              Tabel Anual
-            </button>
-            <button
-              onClick={() => setSubTab('lunar')}
-              className={`filter-tab ${subTab === 'lunar' ? 'active' : ''}`}
-            >
-              <CalendarRange size={14} />
-              Planificare Lunară
-            </button>
-          </div>
-
           {subTab === 'anual' && (
             <button onClick={onClearVacations} className="btn btn-danger btn-sm">
               <Trash2 size={13} />
@@ -234,10 +212,6 @@ export const VacationTable = ({
               <div className="toolbar-divider" />
             </>
           )}
-          <button onClick={handlePrint} className="btn btn-secondary btn-sm">
-            <Printer size={14} />
-            Imprimă
-          </button>
           <button onClick={handleExportPDF} className="btn btn-secondary btn-sm">
             <FileDown size={14} />
             PDF
@@ -261,7 +235,7 @@ export const VacationTable = ({
                       type="text"
                       value={metadata.registrationNumber}
                       onChange={(e) => onUpdateMetadata({ registrationNumber: e.target.value })}
-                      placeholder="35861"
+                      placeholder="12345"
                       className="inline-header-input reg-number"
                     />
                     <span>/</span>
@@ -269,7 +243,7 @@ export const VacationTable = ({
                       type="text"
                       value={metadata.registrationDate}
                       onChange={(e) => onUpdateMetadata({ registrationDate: e.target.value })}
-                      placeholder="30.12.2025"
+                      placeholder="01.01.1999"
                       className="inline-header-input reg-date"
                     />
                   </div>
@@ -343,7 +317,6 @@ export const VacationTable = ({
                           value={info.seniorityTotal}
                           onChange={(e) => onUpdateVacation(emp.id, { seniorityTotal: e.target.value })}
                           className="table-cell-input text-center"
-                          placeholder="Ex: 14/11"
                         />
                       </td>
                       <td>
@@ -352,7 +325,6 @@ export const VacationTable = ({
                           value={info.seniorityUnit}
                           onChange={(e) => onUpdateVacation(emp.id, { seniorityUnit: e.target.value })}
                           className="table-cell-input text-center"
-                          placeholder="Ex: 9/7"
                         />
                       </td>
                       <td>
@@ -361,7 +333,6 @@ export const VacationTable = ({
                           value={info.vacationDaysAllowed}
                           onChange={(e) => onUpdateVacation(emp.id, { vacationDaysAllowed: e.target.value })}
                           className="table-cell-input text-center"
-                          placeholder="Ex: 30+3+5"
                         />
                       </td>
 
@@ -414,20 +385,6 @@ export const VacationTable = ({
               </tbody>
             </table>
 
-            {/* Legal Disclaimers */}
-            <div className="vacation-disclaimer">
-              <p>nr.zile = durata efectivă a CO + fidelitate (la fiecare 5 ani în aceeași unitate, câte o zi) + condiții de muncă</p>
-              <p>În anul {year}, concediul de odihnă suplimentar pentru condiții deosebite este de 5 zile lucrătoare conform OUG nr.36/2025 art.II.</p>
-              <p>Concediul de odihnă se acordă proporțional cu timpul efectiv lucrat.</p>
-              <p>Conform prevederilor Legii nr.53/2003 - Codul muncii:</p>
-              <ul>
-                <li>Salariatul este obligat să efectueze în natură concediul de odihnă în perioada în care a fost programat, cu excepția situațiilor expres prevăzute de lege sau atunci când, din motive obiective, concediul nu poate fi efectuat.</li>
-                <li>Concediul de odihnă se efectuează în fiecare an.</li>
-                <li>În cazul în care salariatul, din motive justificate, nu poate efectua, integral sau parțial, concediul de odihnă anual la care avea dreptul în anul calendaristic respectiv, cu acordul persoanei în cauză, angajatorul este obligat să acorde concediul de odihnă neefectuat întră-o perioadă de 18 luni începând cu anul următor celui în care s-a născut dreptul la concediul de odihnă anual.</li>
-              </ul>
-            </div>
-
-            <PrintSignatures className="vacation-signatures" />
           </>
         )}
 
@@ -592,8 +549,6 @@ export const VacationTable = ({
                 )}
               </tbody>
             </table>
-
-            <PrintSignatures />
           </>
         )}
       </div>

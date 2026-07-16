@@ -1,15 +1,12 @@
-import { useState } from 'react';
 import type { Employee } from '../utils/calculations';
 import type { SchedulerRequirements } from '../utils/scheduler';
 import {
   CalendarDays,
   CalendarRange,
   Table2,
-  UserPlus,
-  Trash2,
   X,
-  Activity,
 } from 'lucide-react';
+import { StaffManager } from './StaffManager';
 
 export type ViewTab = 'pontaj' | 'concedii-anual' | 'concedii-lunar';
 
@@ -26,6 +23,27 @@ interface SidebarProps {
   onUpdateReqs: (reqs: SchedulerRequirements) => void;
 }
 
+const ShiftConfigInput = ({
+  label,
+  value,
+  onDecrease,
+  onIncrease
+}: {
+  label: string;
+  value: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) => (
+  <div className="form-group">
+    <label>{label}</label>
+    <div className="custom-number-input">
+      <button type="button" onClick={onDecrease}>-</button>
+      <input type="number" value={value} readOnly />
+      <button type="button" onClick={onIncrease}>+</button>
+    </div>
+  </div>
+);
+
 export const Sidebar = ({
   isOpen,
   onClose,
@@ -38,21 +56,6 @@ export const Sidebar = ({
   reqs,
   onUpdateReqs,
 }: SidebarProps) => {
-  const [newName, setNewName] = useState('');
-  const [newPattern, setNewPattern] = useState<'normal' | '8h'>('normal');
-
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    onAddEmployee({
-      name: newName.trim(),
-      role: 'AS',
-      active: true,
-      shiftPattern: newPattern,
-    });
-    setNewName('');
-  };
-
   const NAV_ITEMS: { id: ViewTab; label: string; icon: typeof CalendarDays }[] = [
     { id: 'pontaj', label: 'Grafic de Ture', icon: CalendarDays },
     { id: 'concedii-anual', label: 'Concedii — Tabel Anual', icon: Table2 },
@@ -64,7 +67,24 @@ export const Sidebar = ({
       {/* Logo / Brand */}
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <Activity size={18} />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="-11.5 -10.23174 23 20.46348"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            className="animate-spin-slow"
+            style={{ animation: 'spin 15s linear infinite' }}
+          >
+            <circle cx="0" cy="0" r="2.05" fill="currentColor" />
+            <g>
+              <ellipse rx="11" ry="4.2" />
+              <ellipse rx="11" ry="4.2" transform="rotate(60)" />
+              <ellipse rx="11" ry="4.2" transform="rotate(120)" />
+            </g>
+          </svg>
         </div>
         <div className="sidebar-brand">
           <h2>Grafice ATI</h2>
@@ -95,68 +115,6 @@ export const Sidebar = ({
 
       {/* Scrollable Content */}
       <div className="sidebar-content">
-        {/* Staff Manager */}
-        <div className="sidebar-section">
-          <div className="sidebar-section-title">Gestiune Personal</div>
-
-          <form onSubmit={handleAddSubmit} className="sidebar-staff-form">
-            <input
-              type="text"
-              placeholder="Nume și Prenume (ex: POPESCU IONELA)"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-            />
-            <div className="form-row">
-              <select
-                value={newPattern}
-                onChange={(e) => setNewPattern(e.target.value as 'normal' | '8h')}
-              >
-                <option value="normal">Zi/Noapte/8h/4h</option>
-                <option value="8h">Doar 8h</option>
-              </select>
-              <button type="submit" className="sidebar-add-btn" style={{ width: 'auto', flex: '0 0 auto' }}>
-                <UserPlus size={14} />
-              </button>
-            </div>
-          </form>
-
-          <div className="sidebar-staff-count">
-            {employees.length} angajați în secție
-          </div>
-
-          <div className="sidebar-staff-list">
-            {employees.map((emp) => (
-              <div key={emp.id} className="sidebar-staff-item">
-                <span className="staff-name" title={emp.name}>{emp.name}</span>
-                <button
-                  className={`staff-pattern-badge ${emp.shiftPattern === '8h' ? 'eight-h' : 'normal'}`}
-                  onClick={() =>
-                    onUpdateEmployee(emp.id, {
-                      shiftPattern: emp.shiftPattern === '8h' ? 'normal' : '8h',
-                    })
-                  }
-                  title="Click pentru a schimba modelul de tură"
-                >
-                  {emp.shiftPattern === '8h' ? '8H' : 'Z/N'}
-                </button>
-                <button
-                  className="staff-delete-btn"
-                  onClick={() => onRemoveEmployee(emp.id)}
-                  title="Șterge angajat"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-            {employees.length === 0 && (
-              <div className="sidebar-staff-count" style={{ textAlign: 'center', padding: '1rem 0' }}>
-                Niciun angajat înregistrat.
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Shift Requirements Config */}
         <div className="sidebar-section">
           <div className="sidebar-section-title">Asistenți per Tură</div>
@@ -164,159 +122,69 @@ export const Sidebar = ({
             <div className="sidebar-config-group">
               <h4>Tura de Zi</h4>
               <div className="sidebar-config-row">
-                <div className="form-group">
-                  <label>Minim</label>
-                  <div className="custom-number-input">
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = Math.max(0, reqs.AS.minDayShifts - 1);
-                        const maxVal = Math.max(val, reqs.AS.maxDayShifts);
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: maxVal },
-                        });
-                      }}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min={0}
-                      value={reqs.AS.minDayShifts}
-                      readOnly
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = reqs.AS.minDayShifts + 1;
-                        const maxVal = Math.max(val, reqs.AS.maxDayShifts);
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: maxVal },
-                        });
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Maxim</label>
-                  <div className="custom-number-input">
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = Math.max(reqs.AS.minDayShifts, reqs.AS.maxDayShifts - 1);
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, maxDayShifts: val },
-                        });
-                      }}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min={reqs.AS.minDayShifts}
-                      value={reqs.AS.maxDayShifts}
-                      readOnly
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = reqs.AS.maxDayShifts + 1;
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, maxDayShifts: val },
-                        });
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+                <ShiftConfigInput
+                  label="Minim"
+                  value={reqs.AS.minDayShifts}
+                  onDecrease={() => {
+                    const val = Math.max(0, reqs.AS.minDayShifts - 1);
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: Math.max(val, reqs.AS.maxDayShifts) } });
+                  }}
+                  onIncrease={() => {
+                    const val = reqs.AS.minDayShifts + 1;
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, minDayShifts: val, maxDayShifts: Math.max(val, reqs.AS.maxDayShifts) } });
+                  }}
+                />
+                <ShiftConfigInput
+                  label="Maxim"
+                  value={reqs.AS.maxDayShifts}
+                  onDecrease={() => {
+                    const val = Math.max(reqs.AS.minDayShifts, reqs.AS.maxDayShifts - 1);
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, maxDayShifts: val } });
+                  }}
+                  onIncrease={() => {
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, maxDayShifts: reqs.AS.maxDayShifts + 1 } });
+                  }}
+                />
               </div>
             </div>
             <div className="sidebar-config-group">
               <h4>Tura de Noapte</h4>
               <div className="sidebar-config-row">
-                <div className="form-group">
-                  <label>Minim</label>
-                  <div className="custom-number-input">
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = Math.max(0, reqs.AS.minNightShifts - 1);
-                        const maxVal = Math.max(val, reqs.AS.maxNightShifts);
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: maxVal },
-                        });
-                      }}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min={0}
-                      value={reqs.AS.minNightShifts}
-                      readOnly
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = reqs.AS.minNightShifts + 1;
-                        const maxVal = Math.max(val, reqs.AS.maxNightShifts);
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: maxVal },
-                        });
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Maxim</label>
-                  <div className="custom-number-input">
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = Math.max(reqs.AS.minNightShifts, reqs.AS.maxNightShifts - 1);
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, maxNightShifts: val },
-                        });
-                      }}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min={reqs.AS.minNightShifts}
-                      value={reqs.AS.maxNightShifts}
-                      readOnly
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const val = reqs.AS.maxNightShifts + 1;
-                        onUpdateReqs({
-                          ...reqs,
-                          AS: { ...reqs.AS, maxNightShifts: val },
-                        });
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+                <ShiftConfigInput
+                  label="Minim"
+                  value={reqs.AS.minNightShifts}
+                  onDecrease={() => {
+                    const val = Math.max(0, reqs.AS.minNightShifts - 1);
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: Math.max(val, reqs.AS.maxNightShifts) } });
+                  }}
+                  onIncrease={() => {
+                    const val = reqs.AS.minNightShifts + 1;
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, minNightShifts: val, maxNightShifts: Math.max(val, reqs.AS.maxNightShifts) } });
+                  }}
+                />
+                <ShiftConfigInput
+                  label="Maxim"
+                  value={reqs.AS.maxNightShifts}
+                  onDecrease={() => {
+                    const val = Math.max(reqs.AS.minNightShifts, reqs.AS.maxNightShifts - 1);
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, maxNightShifts: val } });
+                  }}
+                  onIncrease={() => {
+                    onUpdateReqs({ ...reqs, AS: { ...reqs.AS, maxNightShifts: reqs.AS.maxNightShifts + 1 } });
+                  }}
+                />
               </div>
             </div>
           </div>
         </div>
+
+        {/* Staff Manager */}
+        <StaffManager
+          employees={employees}
+          onAddEmployee={onAddEmployee}
+          onRemoveEmployee={onRemoveEmployee}
+          onUpdateEmployee={onUpdateEmployee}
+        />
       </div>
 
       {/* Sidebar Footer */}

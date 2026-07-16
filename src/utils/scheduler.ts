@@ -50,7 +50,7 @@ export function validateSchedule(
 
       if (currentShift === 'N') {
         const nextDayShift = empShifts[d + 1];
-        if (nextDayShift && nextDayShift !== '-' && nextDayShift !== 'CO' && nextDayShift !== 'CIC') {
+        if (nextDayShift && nextDayShift !== '-' && nextDayShift !== 'CO' && nextDayShift !== 'CIC' && nextDayShift !== 'L') {
           warnings.push({
             employeeId: emp.id,
             day: d + 1,
@@ -118,7 +118,7 @@ export function filterEligibleCandidates(
     
     if (shiftType === 'N') {
       if (d > 2 && shifts[emp.id][d - 2] === 'N') return false;
-      if (d < daysLength && lockedShifts[emp.id]?.[d + 1] === 'N') return false;
+      if (d < daysLength && shifts[emp.id][d + 1] !== '-') return false;
     }
 
     const targetHours = getEmployeeTargetHours(emp.id, weekdays, lockedShifts, workingDays);
@@ -227,18 +227,69 @@ export function autoGenerateSchedule(
         return current === '-';
       });
 
-      // Distribute shifts evenly across available days
+      // Distribute shifts randomly across available days
       const toAssign = Math.min(slotsToFill, availableDays.length);
+      
+      // Amestecăm zilele disponibile pentru ca turele să nu fie mereu la fel și identice între colegi
+      const shuffledDays = [...availableDays].sort(() => Math.random() - 0.5);
+      
       for (let i = 0; i < toAssign; i++) {
-        // Spread evenly by picking at regular intervals
-        const index = Math.floor((i * availableDays.length) / toAssign);
-        const dayInfo = availableDays[index];
+        const dayInfo = shuffledDays[i];
         shifts[emp.id][dayInfo.day] = '8';
         hoursTracker[emp.id] += 8;
       }
     }
   });
 
+  const scheduleShiftsHelper = (
+    d: number,
+    isWeekend: boolean,
+    normalEmployees: Employee[],
+    shiftsNeeded: number,
+    shiftType: 'N' | 'Z',
+    minRequiredHours: number,
+    targetPattern: 'Z' | 'completedRest'
+  ) => {
+    let count = 0;
+    for (let i = 0; i < shiftsNeeded; i++) {
+      const candidates = filterEligibleCandidates(
+        normalEmployees, d, daysLength, shiftType, shifts,
+        lockedShifts, hoursTracker, weekdays, workingDays, minRequiredHours
+      );
+
+      if (candidates.length === 0) break;
+
+      sortCandidatesByDensity(
+        candidates, d, shifts, hoursTracker, weekdays, workingDays,
+        lockedShifts, getRemainingActiveDaysBound, targetPattern
+      );
+
+      const selected = candidates[0];
+      
+      let actualShiftType: ShiftType = shiftType;
+      if (shiftType === 'Z') {
+        actualShiftType = isWeekend
+          ? 'Z'
+          : (() => {
+              const targetHours = getEmployeeTargetHours(selected.id, weekdays, lockedShifts, workingDays);
+              const remaining = targetHours - hoursTracker[selected.id];
+              if (remaining >= 12) return 'Z';
+              if (remaining >= 8) return '8';
+              return '4';
+            })();
+      }
+
+      shifts[selected.id][d] = actualShiftType;
+      if (actualShiftType === 'Z' || actualShiftType === 'N') hoursTracker[selected.id] += 12;
+      else if (actualShiftType === '8') hoursTracker[selected.id] += 8;
+      else if (actualShiftType === '4') hoursTracker[selected.id] += 4;
+
+      count++;
+    }
+    return count;
+  };
+
+  // Pasul 1: Asigurăm MINIMUL de personal pe TOATĂ luna
   days.forEach((dayInfo) => {
     const d = dayInfo.day;
 
@@ -257,64 +308,53 @@ export function autoGenerateSchedule(
         if (existing === 'N') assignedNightCount++;
       });
 
-      const scheduleShifts = (
-        shiftsNeeded: number,
-        shiftType: 'N' | 'Z',
-        minRequiredHours: number,
-        targetPattern: 'Z' | 'completedRest'
-      ) => {
-        let count = 0;
-        for (let i = 0; i < shiftsNeeded; i++) {
-          const candidates = filterEligibleCandidates(
-            normalEmployees, d, daysLength, shiftType, shifts,
-            lockedShifts, hoursTracker, weekdays, workingDays, minRequiredHours
-          );
-
-          if (candidates.length === 0) break;
-
-          sortCandidatesByDensity(
-            candidates, d, shifts, hoursTracker, weekdays, workingDays,
-            lockedShifts, getRemainingActiveDaysBound, targetPattern
-          );
-
-          const selected = candidates[0];
-          
-          let actualShiftType: ShiftType = shiftType;
-          if (shiftType === 'Z') {
-            actualShiftType = dayInfo.isWeekend
-              ? 'Z'
-              : (() => {
-                  const targetHours = getEmployeeTargetHours(selected.id, weekdays, lockedShifts, workingDays);
-                  const remaining = targetHours - hoursTracker[selected.id];
-                  if (remaining >= 12) return 'Z';
-                  if (remaining >= 8) return '8';
-                  return '4';
-                })();
-          }
-
-          shifts[selected.id][d] = actualShiftType;
-          if (actualShiftType === 'Z' || actualShiftType === 'N') hoursTracker[selected.id] += 12;
-          else if (actualShiftType === '8') hoursTracker[selected.id] += 8;
-          else if (actualShiftType === '4') hoursTracker[selected.id] += 4;
-
-          count++;
-        }
-        return count;
-      };
-
       const minNightsNeeded = Math.max(0, roleReq.minNightShifts - assignedNightCount);
-      assignedNightCount += scheduleShifts(minNightsNeeded, 'N', 12, 'Z');
-
-      const maxNightsNeeded = Math.max(0, Math.max(roleReq.minNightShifts, roleReq.maxNightShifts) - assignedNightCount);
-      assignedNightCount += scheduleShifts(maxNightsNeeded, 'N', 12, 'Z');
+      scheduleShiftsHelper(d, dayInfo.isWeekend, normalEmployees, minNightsNeeded, 'N', 12, 'Z');
 
       const minRequiredDayHours = dayInfo.isWeekend ? 12 : 4;
-      
       const minDaysNeeded = Math.max(0, roleReq.minDayShifts - assignedDayCount);
-      assignedDayCount += scheduleShifts(minDaysNeeded, 'Z', minRequiredDayHours, 'completedRest');
+      scheduleShiftsHelper(d, dayInfo.isWeekend, normalEmployees, minDaysNeeded, 'Z', minRequiredDayHours, 'completedRest');
+    });
+  });
 
+  // Pasul 2: Din orele rămase disponibile, încercăm să atingem MAXIMUL
+  days.forEach((dayInfo) => {
+    const d = dayInfo.day;
+
+    (['AS'] as const).forEach((role) => {
+      const roleReq = requirements[role];
+      const roleEmployees = employees.filter((emp) => emp.active && emp.role === role);
+      const normalEmployees = roleEmployees.filter((emp) => emp.shiftPattern !== '8h');
+
+      let assignedDayCount = 0;
+      let assignedNightCount = 0;
+      roleEmployees.forEach((emp) => {
+        const existing = shifts[emp.id][d];
+        if (emp.shiftPattern !== '8h') {
+          if (existing === 'Z' || existing === '8' || existing === '4') assignedDayCount++;
+        }
+        if (existing === 'N') assignedNightCount++;
+      });
+
+      const maxNightsNeeded = Math.max(0, Math.max(roleReq.minNightShifts, roleReq.maxNightShifts) - assignedNightCount);
+      if (maxNightsNeeded > 0) {
+        scheduleShiftsHelper(d, dayInfo.isWeekend, normalEmployees, maxNightsNeeded, 'N', 12, 'Z');
+      }
+
+      // Re-calculam pentru Zi, în caz că s-a întâmplat ceva
+      assignedDayCount = 0;
+      roleEmployees.forEach((emp) => {
+        const existing = shifts[emp.id][d];
+        if (emp.shiftPattern !== '8h') {
+          if (existing === 'Z' || existing === '8' || existing === '4') assignedDayCount++;
+        }
+      });
+
+      const minRequiredDayHours = dayInfo.isWeekend ? 12 : 4;
       const maxDaysNeeded = Math.max(0, Math.max(roleReq.minDayShifts, roleReq.maxDayShifts) - assignedDayCount);
-      assignedDayCount += scheduleShifts(maxDaysNeeded, 'Z', minRequiredDayHours, 'completedRest');
+      if (maxDaysNeeded > 0) {
+        scheduleShiftsHelper(d, dayInfo.isWeekend, normalEmployees, maxDaysNeeded, 'Z', minRequiredDayHours, 'completedRest');
+      }
     });
   });
 
