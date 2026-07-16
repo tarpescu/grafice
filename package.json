@@ -7,9 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && electron-builder",
+    "build:web": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "npm run build",
+    "predeploy": "npm run build:web",
     "deploy": "gh-pages -d dist"
   },
   "build": {
